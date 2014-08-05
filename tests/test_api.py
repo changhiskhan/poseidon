@@ -112,7 +112,7 @@ def test_keys(client):
     assert len(new_keys) > len(old_keys)
 
     client.keys.update(new_id, 'test-key2')
-    time.sleep(1) # race condition
+    time.sleep(2) # race condition
     key = client.keys.get(new_id)
     assert key['name'] == 'test-key2'
 
