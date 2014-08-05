@@ -13,15 +13,61 @@ def client():
     assert isinstance(client, P.Client)
     return client
 
+@pytest.mark.slowtest
 def test_droplets(client):
-    pass
+    """
+    WARNING this test takes a while :)
+    """
+    assert hasattr(client, 'droplets')
+    assert isinstance(client.droplets, P.Droplets)
+    old_droplets = client.droplets.list() # it works
 
-def test_droplet_actions_basic(client):
-    """non-parametric actions"""
-    pass
+    name = 'test'
+    region = 'sfo1'
+    size = '512mb'
+    id = client.images.list()[0]['id']
+    image = client.images.get(id)
 
-def test_droplet_actions_snapshot(client):
-    pass
+    droplet = client.droplets.create(name, region, size, image.id)
+
+    try:
+        # verify we got what we made
+        assert isinstance(droplet, P.DropletActions)
+        assert droplet.droplet_name == name
+        assert droplet.region['slug'] == region
+        assert droplet.size['slug'] == size
+        assert droplet.image['slug'] == image.slug
+
+        assert len(client.droplets.list()) > len(old_droplets)
+
+        # just check that the request works for now
+        droplet.kernels()
+        old_snapshots = droplet.snapshots()
+        droplet.backups()
+
+        # wait
+        droplet.wait()
+
+        # A few actions
+        # power off
+        droplet.power_off()
+        droplet.wait()
+        # take snapshot
+        droplet.take_snapshot('foobarbaz')
+        droplet.wait()
+        new_snapshots = droplet.snapshots()
+        assert len(new_snapshots) > len(old_snapshots)
+        import pdb; pdb.set_trace()
+        for x in new_snapshots:
+            if x['name'] == 'foobarbaz':
+                snapshot = x
+        client.images.delete(snapshot['id'])
+    finally:
+        client.droplets.delete(droplet.id)
+        droplet.wait()
+
+    assert len(client.droplets.list()) == len(old_droplets)
+
 
 def test_regions(client):
     assert hasattr(client, 'regions')
@@ -32,6 +78,7 @@ def test_regions(client):
     results = set([x['name'] for x in regions])
     assert expected == results
 
+
 def test_sizes(client):
     assert hasattr(client, 'sizes')
     assert isinstance(client.sizes, P.Sizes)
@@ -41,6 +88,7 @@ def test_sizes(client):
                     u'48gb', u'64gb'])
     assert expected == results
 
+
 def test_actions(client):
     assert hasattr(client, 'actions')
     assert isinstance(client.actions, P.Actions)
@@ -48,6 +96,7 @@ def test_actions(client):
     assert len(actions) > 0 # need a test account
     action = client.actions.get(actions[0]['id'])
     assert action == actions[0]
+
 
 def test_keys(client):
     assert hasattr(client, 'keys')
@@ -69,6 +118,7 @@ def test_keys(client):
     client.keys.delete(new_id)
     assert len(client.keys.list()) == len(old_keys)
 
+
 def test_domains(client):
     assert hasattr(client, 'domains')
     assert isinstance(client.domains, P.Domains)
@@ -87,8 +137,10 @@ def test_domains(client):
     client.domains.delete(new_name)
     assert len(client.domains.list()) == len(old_domains)
 
+
 def test_domain_records(client):
     pass
+
 
 def test_images(client):
     pass

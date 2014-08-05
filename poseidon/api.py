@@ -10,6 +10,7 @@ actions that your situation requires.
 """
 
 import os
+import time
 import requests
 import simplejson
 
@@ -20,6 +21,9 @@ API_URL = 'https://api.digitalocean.com'
 """
 TODO: refactor for multipage results
 TODO: unit tests for Images, ImageActions, and DomainRecords
+TODO: more tests for droplets
+TODO: get conftest.py to work and not run slow tests
+TODO: test account?
 """
 
 class APIError(Exception):
@@ -203,6 +207,9 @@ class MutableCollection(ResourceCollection):
         return resp.get(self.result_key, [])
 
     def get(self, id, **kwargs):
+        """
+        Get single unit of collection
+        """
         return (super(MutableCollection, self).get((id,), **kwargs)
                 .get(self.singular, None))
 
@@ -220,10 +227,13 @@ class DropletActions(Resource):
     Droplet actions themselves create a Droplet actions object. These can be
     used to get information about the status of an action.
     """
-    def __init__(self, api, **kwargs):
+    def __init__(self, api, collection, **kwargs):
         super(DropletActions, self).__init__(api)
         self.id = kwargs.pop('id')
+        self.parent = collection
         for k, v in kwargs.iteritems():
+            if k == 'name':
+                k = 'droplet_name'
             setattr(self, k, v)
 
     @property
@@ -278,9 +288,36 @@ class DropletActions(Resource):
     def change_kernel(self, kernel_id):
         return self.action('change_kernel', kernel=kernel_id)
 
-    def snapshot(self, name):
+    def take_snapshot(self, name):
         return self.action('snapshot', name=name)
 
+    def kernels(self):
+        return self.parent.kernels(self.id)
+
+    def snapshots(self):
+        return self.parent.snapshots(self.id)
+
+    def backups(self):
+        return self.parent.backups(self.id)
+
+    def actions(self):
+        return self.parent.actions(self.id)
+
+    def wait(self):
+        """
+        wait for all actions to complete on a droplet
+        """
+        while True:
+            actions = self.actions()
+            slept = False
+            for a in actions:
+                if a['status'] == 'in-progress':
+                    # n.b. gevent will monkey patch
+                    time.sleep(5)
+                    slept = True
+                    break
+            if not slept:
+                break
 
 
 class ImageActions(Resource):
@@ -297,6 +334,8 @@ class ImageActions(Resource):
         super(ImageActions, self).__init__(api)
         self.id = id
         for k, v in kwargs.iteritems():
+            if k == 'name':
+                k = 'image_name'
             setattr(self, k, v)
 
     def transfer(self, type, region):
@@ -326,29 +365,33 @@ class Droplets(MutableCollection):
     name = 'droplets'
 
     def kernels(self, id):
-        return self._prop('kernels')
+        return self._prop(id, 'kernels')
 
     def snapshots(self, id):
-        return self._prop('snapshots')
+        return self._prop(id, 'snapshots')
 
     def backups(self, id):
-        return self._prop('backups')
+        return self._prop(id, 'backups')
 
     def actions(self, id):
-        return self._prop('actions')
+        return self._prop(id, 'actions')
 
     def _prop(self, id, prop):
         return super(MutableCollection, self).get((id, prop))[prop]
 
     def create(self, name, region, size, image, ssh_keys=None,
                backups=None, ipv6=None, private_networking=None):
-        return self.post(name=name, region=region, size=size, image=image,
+        resp = self.post(name=name, region=region, size=size, image=image,
                          ssh_keys=ssh_keys, backups=backups, ipv6=ipv6,
                          private_networking=private_networking)
+        return self.get(resp[self.singular]['id'])
 
     def get(self, id):
-        info = super(Droplets, self).get((id,))
-        return DropletActions(self.api, **info)
+        info = super(Droplets, self).get(id)
+        return DropletActions(self.api, self, **info)
+
+    def update(self, id, **kwargs):
+        raise NotImplementedError("Not supported by API")
 
 
 
@@ -368,7 +411,7 @@ class Images(MutableCollection):
 
     def get(self, id):
         """id or slug"""
-        info = super(Images, self).get((id,)).get(self.singular, None)
+        info = super(Images, self).get(id)
         return ImageActions(self.api, **info)
 
 
