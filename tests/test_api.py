@@ -1,4 +1,5 @@
 import os
+import time
 import pytest
 import poseidon.api as P
 
@@ -13,7 +14,7 @@ def client():
     assert isinstance(client, P.Client)
     return client
 
-@pytest.mark.slowtest
+@pytest.mark.slow
 def test_droplets(client):
     """
     WARNING this test takes a while :)
@@ -22,7 +23,7 @@ def test_droplets(client):
     assert isinstance(client.droplets, P.Droplets)
     old_droplets = client.droplets.list() # it works
 
-    name = 'test'
+    name = 'test-droplet'
     region = 'sfo1'
     size = '512mb'
     id = client.images.list()[0]['id']
@@ -57,7 +58,6 @@ def test_droplets(client):
         droplet.wait()
         new_snapshots = droplet.snapshots()
         assert len(new_snapshots) > len(old_snapshots)
-        import pdb; pdb.set_trace()
         for x in new_snapshots:
             if x['name'] == 'foobarbaz':
                 snapshot = x
@@ -105,15 +105,16 @@ def test_keys(client):
     public_key = ("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAQQDWF7SdoK0JvdjGR/8MHjj"
                   "b7qtKVSdqoVZ2bCX0SXdn2pxZitnFjUx+lQ4osMGjOOTE/Hi86qQnFGE8Ym"
                   "Sur/LT example")
-    rs = client.keys.create('test', public_key)
+    rs = client.keys.create('test-key', public_key)
     new_id = rs['id']
     assert public_key == rs['public_key']
     new_keys = client.keys.list()
     assert len(new_keys) > len(old_keys)
 
-    client.keys.update(new_id, 'test2')
+    client.keys.update(new_id, 'test-key2')
+    time.sleep(1) # race condition
     key = client.keys.get(new_id)
-    assert key['name'] == 'test2'
+    assert key['name'] == 'test-key2'
 
     client.keys.delete(new_id)
     assert len(client.keys.list()) == len(old_keys)

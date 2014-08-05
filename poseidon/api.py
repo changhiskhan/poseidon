@@ -12,7 +12,7 @@ actions that your situation requires.
 import os
 import time
 import requests
-import simplejson
+import simplejson as json
 
 API_VERSION = 'v2'
 API_URL = 'https://api.digitalocean.com'
@@ -22,7 +22,6 @@ API_URL = 'https://api.digitalocean.com'
 TODO: refactor for multipage results
 TODO: unit tests for Images, ImageActions, and DomainRecords
 TODO: more tests for droplets
-TODO: get conftest.py to work and not run slow tests
 TODO: test account?
 """
 
@@ -65,7 +64,7 @@ class RestAPI(object):
     def get_response(self, req):
         try:
             return req.json()
-        except simplejson.JSONDecodeError:
+        except json.JSONDecodeError:
             return {}
 
     def get_request_headers(self):
@@ -243,53 +242,53 @@ class DropletActions(Resource):
     def get_action(self, action_id):
         return self.get((action_id,)).get('action')
 
-    def action(self, type, **kwargs):
+    def _action(self, type, **kwargs):
         return self.post(type=type, **kwargs)
 
     def reboot(self):
-        return self.action('reboot')
+        return self._action('reboot')
 
     def power_cycle(self):
-        return self.action('power_cycle')
+        return self._action('power_cycle')
 
     def shutdown(self):
-        return self.action('shutdown')
+        return self._action('shutdown')
 
     def power_off(self):
-        return self.action('power_off')
+        return self._action('power_off')
 
     def power_on(self):
-        return self.action('power_on')
+        return self._action('power_on')
 
     def password_reset(self):
-        return self.action('password_reset')
+        return self._action('password_reset')
 
     def enable_ipv6(self):
-        return self.action('enable_ipv6')
+        return self._action('enable_ipv6')
 
     def disable_backups(self):
-        return self.action('disable_backups')
+        return self._action('disable_backups')
 
     def enable_private_networking(self):
-        return self.action('enable_private_networking')
+        return self._action('enable_private_networking')
 
     def resize(self, size):
-        return self.action('resize', size=size)
+        return self._action('resize', size=size)
 
     def restore(self, image):
-        return self.action('restore', image=image)
+        return self._action('restore', image=image)
 
     def rebuild(self, image):
-        return self.action('rebuild', image=image)
+        return self._action('rebuild', image=image)
 
     def rename(self, name):
-        return self.action('rename', name=name)
+        return self._action('rename', name=name)
 
     def change_kernel(self, kernel_id):
-        return self.action('change_kernel', kernel=kernel_id)
+        return self._action('change_kernel', kernel=kernel_id)
 
     def take_snapshot(self, name):
-        return self.action('snapshot', name=name)
+        return self._action('snapshot', name=name)
 
     def kernels(self):
         return self.parent.kernels(self.id)
