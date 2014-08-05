@@ -1,4 +1,4 @@
 poseidon
 ========
 
-Python CLI for Digital Ocean API v2
+Python wrapper for Digital Ocean API v2
