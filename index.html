@@ -39,37 +39,187 @@
         <ul></ul>
       </nav>
       <section>
-        <h3>
-<a name="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages"><span class="octicon octicon-link"></span></a>Welcome to GitHub Pages.</h3>
+        <h1>
+<a name="poseidon" class="anchor" href="#poseidon"><span class="octicon octicon-link"></span></a>poseidon</h1>
 
-<p>This automatic page generator is the easiest way to create beautiful pages for all of your projects. Author your page content here using GitHub Flavored Markdown, select a template crafted by a designer, and publish. After your page is generated, you can check out the new branch:</p>
+<p>Python library for managing your Digital Ocean account via API v2</p>
 
-<pre><code>$ cd your_repo_root/repo_name
-$ git fetch origin
-$ git checkout gh-pages
+<p>The DigitalOcean API allows you to manage Droplets and resources within the
+DigitalOcean cloud in a simple, programmatic way using conventional HTTP
+requests. The endpoints are intuitive and powerful, allowing you to easily make
+calls to retrieve information or to execute actions.</p>
+
+<p>All of the functionality that you are familiar with in the DigitalOcean control
+panel is also available through the API, allowing you to script the complex
+actions that your situation requires.</p>
+
+<p>This library starts with a python wrapper for the API and aims to build tools to
+make it easier to manage, provision, and deploy to Digital Ocean.</p>
+
+<h2>
+<a name="setup" class="anchor" href="#setup"><span class="octicon octicon-link"></span></a>Setup</h2>
+
+<p><code>pip install -U poseidon</code></p>
+
+<p>To run the unit tests make sure you have the <code>pytest</code> module.
+If not, run <code>pip install -U pytest</code></p>
+
+<h2>
+<a name="examples" class="anchor" href="#examples"><span class="octicon octicon-link"></span></a>Examples</h2>
+
+<p>Setup authentication by generating an API key and exporting it as the value of the
+<code>DIGITALOCEAN_API_KEY</code> environment variable.</p>
+
+<h3>
+<a name="connect-to-api" class="anchor" href="#connect-to-api"><span class="octicon octicon-link"></span></a>Connect to API</h3>
+
+<pre><code>import poseidon.api as po
+client = po.connect() # or po.connect(api_key=&lt;KEY&gt;) for custom api key
 </code></pre>
 
-<p>If you're using the GitHub for Mac, simply sync your repository and you'll see the new branch.</p>
+<h3>
+<a name="create-a-droplet" class="anchor" href="#create-a-droplet"><span class="octicon octicon-link"></span></a>Create a droplet</h3>
+
+<pre><code>image_id = 135123 # replace with your own
+droplet = client.droplets.create(name='test', region='sfo1', size='512mb',
+                                 image=image_id)
+droplet.wait() # waits until pending creation is complete
+</code></pre>
 
 <h3>
-<a name="designer-templates" class="anchor" href="#designer-templates"><span class="octicon octicon-link"></span></a>Designer Templates</h3>
+<a name="programmatically-create-a-snapshot" class="anchor" href="#programmatically-create-a-snapshot"><span class="octicon octicon-link"></span></a>Programmatically create a snapshot</h3>
 
-<p>We've crafted some handsome templates for you to use. Go ahead and continue to layouts to browse through them. You can easily go back to edit your page before publishing. After publishing your page, you can revisit the page generator and switch to another theme. Your Page content will be preserved if it remained markdown format.</p>
-
-<h3>
-<a name="rather-drive-stick" class="anchor" href="#rather-drive-stick"><span class="octicon octicon-link"></span></a>Rather Drive Stick?</h3>
-
-<p>If you prefer to not use the automatic generator, push a branch named <code>gh-pages</code> to your repository to create a page manually. In addition to supporting regular HTML content, GitHub Pages support Jekyll, a simple, blog aware static site generator written by our own Tom Preston-Werner. Jekyll makes it easy to create site-wide headers and footers without having to copy them across every page. It also offers intelligent blog support and other advanced templating features.</p>
-
-<h3>
-<a name="authors-and-contributors" class="anchor" href="#authors-and-contributors"><span class="octicon octicon-link"></span></a>Authors and Contributors</h3>
-
-<p>You can <a href="https://github.com/blog/821" class="user-mention">@mention</a> a GitHub username to generate a link to their profile. The resulting <code>&lt;a&gt;</code> element will link to the contributor's GitHub Profile. For example: In 2007, Chris Wanstrath (<a href="https://github.com/defunkt" class="user-mention">@defunkt</a>), PJ Hyett (<a href="https://github.com/pjhyett" class="user-mention">@pjhyett</a>), and Tom Preston-Werner (<a href="https://github.com/mojombo" class="user-mention">@mojombo</a>) founded GitHub.</p>
+<pre><code>droplet.power_off() # snapshots are only allowed while powered off
+droplet.wait() # waits until powered off
+droplet.take_snapshot('test-snapshot')
+droplet.wait()
+</code></pre>
 
 <h3>
-<a name="support-or-contact" class="anchor" href="#support-or-contact"><span class="octicon octicon-link"></span></a>Support or Contact</h3>
+<a name="check-that-it-worked" class="anchor" href="#check-that-it-worked"><span class="octicon octicon-link"></span></a>Check that it worked</h3>
 
-<p>Having trouble with Pages? Check out the documentation at <a href="http://help.github.com/pages">http://help.github.com/pages</a> or contact <a href="mailto:support@github.com">support@github.com</a> and we’ll help you sort it out.</p>
+<pre><code>snapshots = droplet.snapshots() # one of these should be named 'test-snapshot'
+</code></pre>
+
+<h3>
+<a name="other-simple-droplet-commands" class="anchor" href="#other-simple-droplet-commands"><span class="octicon octicon-link"></span></a>Other simple droplet commands</h3>
+
+<pre><code>droplet.reboot()
+droplet.shutdown()
+droplet.power_on()
+droplet.power_cycle()
+droplet.password_reset()
+droplet.enable_ipv6()
+droplet.disable_backups()
+droplet.enable_private_networking()
+</code></pre>
+
+<h3>
+<a name="droplet-commands-that-take-a-parameter" class="anchor" href="#droplet-commands-that-take-a-parameter"><span class="octicon octicon-link"></span></a>Droplet commands that take a parameter</h3>
+
+<pre><code>droplet.resize('1024mb')
+droplet.restore(image_id) # integer
+droplet.rebuild(image_id)
+droplet.rename('new-name')
+droplet.change_kernel(12534)
+</code></pre>
+
+<h3>
+<a name="waiting-for-pending-actions-to-complete" class="anchor" href="#waiting-for-pending-actions-to-complete"><span class="octicon octicon-link"></span></a>Waiting for pending actions to complete</h3>
+
+<p><code>droplet.wait() # polls every 5 seconds until no more in-progress actions</code></p>
+
+<h3>
+<a name="delete-droplet" class="anchor" href="#delete-droplet"><span class="octicon octicon-link"></span></a>Delete droplet</h3>
+
+<p><code>droplet.delete()</code></p>
+
+<h3>
+<a name="keys" class="anchor" href="#keys"><span class="octicon octicon-link"></span></a>Keys</h3>
+
+<pre><code># list keys
+client.keys.list() # it works
+
+# create a new key
+public_key = ("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAQQDWF7SdoK0JvdjGR/8MHjj"
+              "b7qtKVSdqoVZ2bCX0SXdn2pxZitnFjUx+lQ4osMGjOOTE/Hi86qQnFGE8Ym"
+              "Sur/LT example")
+key = client.keys.create('test-key', public_key)
+print rs['public_key']
+print rs['name']
+
+# rename the key
+client.keys.update(key['id'], 'test-key2')
+
+# delete the key
+client.keys.delete(new_id)
+</code></pre>
+
+<h3>
+<a name="domains" class="anchor" href="#domains"><span class="octicon octicon-link"></span></a>Domains</h3>
+
+<pre><code># list domains
+client.domains.list() # it works
+
+# create new domain
+ip_address = '127.0.0.1'
+test = 'b7qtKVSdqoVZ2bCX0SXdn2pxZitnFjUx.com' # must be unique
+domain = client.domains.create(test, ip_address)
+print domain['name']
+
+# retrieve a domain by name
+new_domain = client.domains.get(domain['name'])
+
+# delete a domain by name
+client.domains.delete(new_domain['name'])
+</code></pre>
+
+<h3>
+<a name="regions" class="anchor" href="#regions"><span class="octicon octicon-link"></span></a>Regions</h3>
+
+<p><code>client.regions.list()</code></p>
+
+<h3>
+<a name="sizes" class="anchor" href="#sizes"><span class="octicon octicon-link"></span></a>Sizes</h3>
+
+<p><code>client.sizes.list()</code></p>
+
+<h2>
+<a name="testing" class="anchor" href="#testing"><span class="octicon octicon-link"></span></a>Testing</h2>
+
+<pre><code>pip install -U pytest
+py.test
+</code></pre>
+
+<p>Because the test for droplets goes through the exercise of creating a new droplet,
+modifying it, then finally destroying it, the test takes a long time to run.
+To only run the other tests, use the <code>not slow</code> marker from <code>pytest</code>:</p>
+
+<pre><code>~$ py.test -v -m "not slow"
+===================================== test session starts ======================================
+platform linux2 -- Python 2.7.6 -- py-1.4.23 -- pytest-2.6.0 --
+collected 8 items
+
+tests/test_api.py@72::test_regions PASSED
+tests/test_api.py@82::test_sizes PASSED
+tests/test_api.py@92::test_actions PASSED
+tests/test_api.py@101::test_keys PASSED
+tests/test_api.py@122::test_domains PASSED
+tests/test_api.py@141::test_domain_records PASSED
+tests/test_api.py@145::test_images PASSED
+
+============================ 1 tests deselected by "-m 'not slow'" =============================
+============================ 7 passed, 1 deselected in 6.85 seconds ============================
+</code></pre>
+
+<h2>
+<a name="todo" class="anchor" href="#todo"><span class="octicon octicon-link"></span></a>TODO</h2>
+
+<ol>
+<li>Refactor the result format to allow for easy multipage resultset paging</li>
+<li>Additional unit tests</li>
+<li>Tools for scaling, provisioning, deployment</li>
+</ol>
       </section>
       <footer>
         <p>Project maintained by <a href="https://github.com/changhiskhan">changhiskhan</a></p>
