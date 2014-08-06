@@ -4,7 +4,7 @@ import os
 from setuptools import setup, find_packages
 
 DESCRIPTION = "Python wrapper for Digital Ocean API v2"
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 
 def write_version_py(filename=None):
     cnt = """\
