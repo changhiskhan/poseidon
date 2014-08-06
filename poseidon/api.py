@@ -242,53 +242,56 @@ class DropletActions(Resource):
     def get_action(self, action_id):
         return self.get((action_id,)).get('action')
 
-    def _action(self, type, **kwargs):
-        return self.post(type=type, **kwargs)
+    def _action(self, type, wait=True, **kwargs):
+        result = self.post(type=type, **kwargs)
+        if wait:
+            self.wait()
+        return result
 
-    def reboot(self):
-        return self._action('reboot')
+    def reboot(self, wait=True):
+        return self._action('reboot', wait)
 
-    def power_cycle(self):
-        return self._action('power_cycle')
+    def power_cycle(self, wait=True):
+        return self._action('power_cycle', wait)
 
-    def shutdown(self):
-        return self._action('shutdown')
+    def shutdown(self, wait=True):
+        return self._action('shutdown', wait)
 
-    def power_off(self):
-        return self._action('power_off')
+    def power_off(self, wait=True):
+        return self._action('power_off', wait)
 
-    def power_on(self):
-        return self._action('power_on')
+    def power_on(self, wait=True):
+        return self._action('power_on', wait)
 
-    def password_reset(self):
-        return self._action('password_reset')
+    def password_reset(self, wait=True):
+        return self._action('password_reset', wait)
 
-    def enable_ipv6(self):
-        return self._action('enable_ipv6')
+    def enable_ipv6(self, wait=True):
+        return self._action('enable_ipv6', wait)
 
-    def disable_backups(self):
-        return self._action('disable_backups')
+    def disable_backups(self, wait=True):
+        return self._action('disable_backups', wait)
 
-    def enable_private_networking(self):
-        return self._action('enable_private_networking')
+    def enable_private_networking(self, wait=True):
+        return self._action('enable_private_networking', wait)
 
-    def resize(self, size):
-        return self._action('resize', size=size)
+    def resize(self, size, wait=True):
+        return self._action('resize', size=size, wait=wait)
 
-    def restore(self, image):
-        return self._action('restore', image=image)
+    def restore(self, image, wait=True):
+        return self._action('restore', image=image, wait=wait)
 
-    def rebuild(self, image):
-        return self._action('rebuild', image=image)
+    def rebuild(self, image, wait=True):
+        return self._action('rebuild', image=image, wait=wait)
 
-    def rename(self, name):
-        return self._action('rename', name=name)
+    def rename(self, name, wait=True):
+        return self._action('rename', name=name, wait=wait)
 
-    def change_kernel(self, kernel_id):
-        return self._action('change_kernel', kernel=kernel_id)
+    def change_kernel(self, kernel_id, wait=True):
+        return self._action('change_kernel', kernel=kernel_id, wait=wait)
 
-    def take_snapshot(self, name):
-        return self._action('snapshot', name=name)
+    def take_snapshot(self, name, wait=True):
+        return self._action('snapshot', name=name, wait=wait)
 
     def kernels(self):
         return self.parent.kernels(self.id)
@@ -302,17 +305,24 @@ class DropletActions(Resource):
     def actions(self):
         return self.parent.actions(self.id)
 
+    def delete(self, wait=True):
+        resp = self.parent.delete(self.id)
+        if wait:
+            self.wait()
+        return resp
+
     def wait(self):
         """
         wait for all actions to complete on a droplet
         """
+        interval_seconds = 5
         while True:
             actions = self.actions()
             slept = False
             for a in actions:
                 if a['status'] == 'in-progress':
                     # n.b. gevent will monkey patch
-                    time.sleep(5)
+                    time.sleep(interval_seconds)
                     slept = True
                     break
             if not slept:
@@ -379,15 +389,24 @@ class Droplets(MutableCollection):
         return super(MutableCollection, self).get((id, prop))[prop]
 
     def create(self, name, region, size, image, ssh_keys=None,
-               backups=None, ipv6=None, private_networking=None):
+               backups=None, ipv6=None, private_networking=None, wait=True):
         resp = self.post(name=name, region=region, size=size, image=image,
                          ssh_keys=ssh_keys, backups=backups, ipv6=ipv6,
                          private_networking=private_networking)
-        return self.get(resp[self.singular]['id'])
+        droplet = self.get(resp[self.singular]['id'])
+        if wait:
+            droplet.wait()
+        return droplet
 
     def get(self, id):
         info = super(Droplets, self).get(id)
         return DropletActions(self.api, self, **info)
+
+    def by_name(self, name):
+        for d in self.list():
+            if d['name'] == name:
+                return self.get(d['id'])
+        raise KeyError("Could not find droplet with name %s" % name)
 
     def update(self, id, **kwargs):
         raise NotImplementedError("Not supported by API")

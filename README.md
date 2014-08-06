@@ -41,15 +41,12 @@ client = po.connect() # or po.connect(api_key=<KEY>) for custom api key
 image_id = 135123 # replace with your own
 droplet = client.droplets.create(name='test', region='sfo1', size='512mb',
                                  image=image_id)
-droplet.wait() # waits until pending creation is complete
 ```
 
 ### Programmatically create a snapshot
 ```
 droplet.power_off() # snapshots are only allowed while powered off
-droplet.wait() # waits until powered off
 droplet.take_snapshot('test-snapshot')
-droplet.wait()
 ```
 
 ### Check that it worked
@@ -77,9 +74,6 @@ droplet.rebuild(image_id)
 droplet.rename('new-name')
 droplet.change_kernel(12534)
 ```
-
-### Waiting for pending actions to complete
-`droplet.wait() # polls every 5 seconds until no more in-progress actions`
 
 ### Delete droplet
 `droplet.delete()`
