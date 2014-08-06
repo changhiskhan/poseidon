@@ -14,6 +14,28 @@ def client():
     assert isinstance(client, P.Client)
     return client
 
+def test_keys(client):
+    assert hasattr(client, 'keys')
+    assert isinstance(client.keys, P.Keys)
+    old_keys = client.keys.list() # it works
+    public_key = ("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAQQDWF7SdoK0JvdjGR/8MHjj"
+                  "b7qtKVSdqoVZ2bCX0SXdn2pxZitnFjUx+lQ4osMGjOOTE/Hi86qQnFGE8Ym"
+                  "Sur/LT example")
+    rs = client.keys.create('test-key', public_key)
+    new_id = rs['id']
+    assert public_key == rs['public_key']
+    new_keys = client.keys.list()
+    assert len(new_keys) > len(old_keys)
+
+    client.keys.update(new_id, 'test-key2')
+    time.sleep(2) # race condition
+    key = client.keys.get(new_id)
+    assert key['name'] == 'test-key2'
+
+    client.keys.delete(new_id)
+    assert len(client.keys.list()) == len(old_keys)
+
+
 @pytest.mark.slow
 def test_droplets(client):
     """
@@ -46,16 +68,11 @@ def test_droplets(client):
         old_snapshots = droplet.snapshots()
         droplet.backups()
 
-        # wait
-        droplet.wait()
-
         # A few actions
         # power off
         droplet.power_off()
-        droplet.wait()
         # take snapshot
         droplet.take_snapshot('foobarbaz')
-        droplet.wait()
         new_snapshots = droplet.snapshots()
         assert len(new_snapshots) > len(old_snapshots)
         for x in new_snapshots:
@@ -63,8 +80,7 @@ def test_droplets(client):
                 snapshot = x
         client.images.delete(snapshot['id'])
     finally:
-        client.droplets.delete(droplet.id)
-        droplet.wait()
+        droplet.delete()
 
     assert len(client.droplets.list()) == len(old_droplets)
 
@@ -96,28 +112,6 @@ def test_actions(client):
     assert len(actions) > 0 # need a test account
     action = client.actions.get(actions[0]['id'])
     assert action == actions[0]
-
-
-def test_keys(client):
-    assert hasattr(client, 'keys')
-    assert isinstance(client.keys, P.Keys)
-    old_keys = client.keys.list() # it works
-    public_key = ("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAQQDWF7SdoK0JvdjGR/8MHjj"
-                  "b7qtKVSdqoVZ2bCX0SXdn2pxZitnFjUx+lQ4osMGjOOTE/Hi86qQnFGE8Ym"
-                  "Sur/LT example")
-    rs = client.keys.create('test-key', public_key)
-    new_id = rs['id']
-    assert public_key == rs['public_key']
-    new_keys = client.keys.list()
-    assert len(new_keys) > len(old_keys)
-
-    client.keys.update(new_id, 'test-key2')
-    time.sleep(2) # race condition
-    key = client.keys.get(new_id)
-    assert key['name'] == 'test-key2'
-
-    client.keys.delete(new_id)
-    assert len(client.keys.list()) == len(old_keys)
 
 
 def test_domains(client):
