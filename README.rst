@@ -56,7 +56,6 @@ Create a droplet
    image_id = 135123 # replace with your own
    droplet = client.droplets.create(name='test', region='sfo1', size='512mb',
                                     image=image_id)
-   droplet.wait() # waits until pending creation is complete
 
 
 Programmatically create a snapshot
@@ -65,9 +64,7 @@ Programmatically create a snapshot
 .. code:: python
 
     droplet.power_off() # snapshots are only allowed while powered off
-    droplet.wait() # waits until powered off
     droplet.take_snapshot('test-snapshot')
-    droplet.wait()
 
 
 Check that it worked

@@ -240,7 +240,7 @@ class DropletActions(Resource):
         return 'droplets/%s/actions' % self.id
 
     def get_action(self, action_id):
-        self.get((action_id,)).get('action')
+        return self.get((action_id,)).get('action')
 
     def _action(self, type, wait=True, **kwargs):
         result = self.post(type=type, **kwargs)
@@ -393,14 +393,20 @@ class Droplets(MutableCollection):
         resp = self.post(name=name, region=region, size=size, image=image,
                          ssh_keys=ssh_keys, backups=backups, ipv6=ipv6,
                          private_networking=private_networking)
-        return self.get(resp[self.singular]['id'], wait=wait)
-
-    def get(self, id, wait=True):
-        info = super(Droplets, self).get(id)
-        droplet = DropletActions(self.api, self, **info)
+        droplet = self.get(resp[self.singular]['id'])
         if wait:
             droplet.wait()
         return droplet
+
+    def get(self, id):
+        info = super(Droplets, self).get(id)
+        return DropletActions(self.api, self, **info)
+
+    def by_name(self, name):
+        for d in self.list():
+            if d['name'] == name:
+                return self.get(d['id'])
+        raise KeyError("Could not find droplet with name %s" % name)
 
     def update(self, id, **kwargs):
         raise NotImplementedError("Not supported by API")

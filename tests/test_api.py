@@ -15,6 +15,7 @@ def client():
     return client
 
 def test_keys(client):
+    # TODO this test is a little flakey after the update call
     assert hasattr(client, 'keys')
     assert isinstance(client.keys, P.Keys)
     old_keys = client.keys.list() # it works
@@ -27,8 +28,9 @@ def test_keys(client):
     new_keys = client.keys.list()
     assert len(new_keys) > len(old_keys)
 
+    time.sleep(2)
     client.keys.update(new_id, 'test-key2')
-    time.sleep(2) # race condition
+    time.sleep(2)
     key = client.keys.get(new_id)
     assert key['name'] == 'test-key2'
 
@@ -51,7 +53,8 @@ def test_droplets(client):
     id = client.images.list()[0]['id']
     image = client.images.get(id)
 
-    droplet = client.droplets.create(name, region, size, image.id)
+    client.droplets.create(name, region, size, image.id)
+    droplet = client.droplets.by_name(name)
 
     try:
         # verify we got what we made
