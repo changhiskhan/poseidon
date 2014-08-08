@@ -1,7 +1,61 @@
 import time
 
-from poseidon.api import Resource
-from poseidon.ssh import SSHConnection
+from poseidon.api import Resource, MutableCollection
+from poseidon.ssh import SSHClient
+
+
+class Droplets(MutableCollection):
+    """
+    A Droplet is a DigitalOcean virtual machine. By sending requests to the
+    Droplet endpoint, you can list, create, or delete Droplets.
+
+    Some of the attributes will have an object value. The region, image, and
+    size objects will all contain the standard attributes of their associated
+    types. Find more information about each of these objects in their
+    respective sections.
+    """
+
+    name = 'droplets'
+
+    def kernels(self, id):
+        return self._prop(id, 'kernels')
+
+    def snapshots(self, id):
+        return self._prop(id, 'snapshots')
+
+    def backups(self, id):
+        return self._prop(id, 'backups')
+
+    def actions(self, id):
+        return self._prop(id, 'actions')
+
+    def _prop(self, id, prop):
+        return super(MutableCollection, self).get((id, prop))[prop]
+
+    def create(self, name, region, size, image, ssh_keys=None,
+               backups=None, ipv6=None, private_networking=None, wait=True):
+        resp = self.post(name=name, region=region, size=size, image=image,
+                         ssh_keys=ssh_keys, backups=backups, ipv6=ipv6,
+                         private_networking=private_networking)
+        droplet = self.get(resp[self.singular]['id'])
+        if wait:
+            droplet.wait()
+        return droplet
+
+    def get(self, id):
+        info = super(Droplets, self).get(id)
+        return DropletActions(self.api, self, **info)
+
+    def by_name(self, name):
+        for d in self.list():
+            if d['name'] == name:
+                return self.get(d['id'])
+        raise KeyError("Could not find droplet with name %s" % name)
+
+    def update(self, id, **kwargs):
+        raise NotImplementedError("Not supported by API")
+
+
 
 class DropletActions(Resource):
     """
@@ -116,3 +170,18 @@ class DropletActions(Resource):
                     break
             if not slept:
                 break
+
+    def connect(self, ipv6=False, interactive=False):
+        """
+        Open SSH connection to droplet
+        """
+        if ipv6:
+            raise NotImplementedError()
+        ip = None
+        for eth in self.networks['v4']:
+            if eth['type'] == 'public':
+                ip = eth['ip_address']
+                break
+        if ip is None:
+            raise ValueError("No public IP found. Huh?")
+        return SSHClient(ip, interactive=interactive)

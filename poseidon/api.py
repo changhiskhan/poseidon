@@ -244,59 +244,6 @@ class ImageActions(Resource):
 # Mutable collections
 # ----------------------------------------------------------------------
 
-class Droplets(MutableCollection):
-    """
-    A Droplet is a DigitalOcean virtual machine. By sending requests to the
-    Droplet endpoint, you can list, create, or delete Droplets.
-
-    Some of the attributes will have an object value. The region, image, and
-    size objects will all contain the standard attributes of their associated
-    types. Find more information about each of these objects in their
-    respective sections.
-    """
-
-    name = 'droplets'
-
-    def kernels(self, id):
-        return self._prop(id, 'kernels')
-
-    def snapshots(self, id):
-        return self._prop(id, 'snapshots')
-
-    def backups(self, id):
-        return self._prop(id, 'backups')
-
-    def actions(self, id):
-        return self._prop(id, 'actions')
-
-    def _prop(self, id, prop):
-        return super(MutableCollection, self).get((id, prop))[prop]
-
-    def create(self, name, region, size, image, ssh_keys=None,
-               backups=None, ipv6=None, private_networking=None, wait=True):
-        resp = self.post(name=name, region=region, size=size, image=image,
-                         ssh_keys=ssh_keys, backups=backups, ipv6=ipv6,
-                         private_networking=private_networking)
-        droplet = self.get(resp[self.singular]['id'])
-        if wait:
-            droplet.wait()
-        return droplet
-
-    def get(self, id):
-        info = super(Droplets, self).get(id)
-        return DropletActions(self.api, self, **info)
-
-    def by_name(self, name):
-        for d in self.list():
-            if d['name'] == name:
-                return self.get(d['id'])
-        raise KeyError("Could not find droplet with name %s" % name)
-
-    def update(self, id, **kwargs):
-        raise NotImplementedError("Not supported by API")
-
-
-
 class Images(MutableCollection):
     """
     Images in DigitalOcean may refer to one of a few different kinds of objects.
@@ -448,36 +395,3 @@ class Actions(ResourceCollection):
     def get(self, id, **kwargs):
         return (super(Actions, self).get((id,), **kwargs)
                 .get(self.singular, None))
-
-
-
-# ----------------------------------------------------------------------
-# API Client
-# ----------------------------------------------------------------------
-
-class Client(object):
-    """
-    The DigitalOcean API allows you to manage Droplets and resources within the
-    DigitalOcean cloud in a simple, programmatic way using conventional HTTP
-    requests. The endpoints are intuitive and powerful, allowing you to easily
-    make calls to retrieve information or to execute actions.
-
-    All of the functionality that you are familiar with in the DigitalOcean
-    control panel is also available through the API, allowing you to script the
-    complex actions that your situation requires.
-    """
-
-    def __init__(self, api_key=None, api_url=API_URL, api_version=API_VERSION):
-        self.api = DigitalOceanAPI(api_key, api_url, api_version)
-        self.actions = Actions(self.api)
-        self.domains = Domains(self.api)
-        self.droplets = Droplets(self.api)
-        self.images = Images(self.api)
-        self.keys = Keys(self.api)
-        self.regions = Regions(self.api)
-        self.sizes = Sizes(self.api)
-
-
-
-def connect(api_key=None, api_url=API_URL, api_version=API_VERSION):
-    return Client(api_key, api_url, api_version)

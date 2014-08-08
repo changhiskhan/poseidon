@@ -2,6 +2,9 @@ import os
 import time
 import pytest
 import poseidon.api as P
+from poseidon import connect
+from poseidon.client import Client
+
 
 # TODO need test account?
 
@@ -10,9 +13,10 @@ TEST_API_KEY=os.environ.get('TEST_DIGITALOCEAN_API_KEY', None)
 
 @pytest.fixture
 def client():
-    client = P.connect(api_key=TEST_API_KEY)
-    assert isinstance(client, P.Client)
+    client = connect(api_key=TEST_API_KEY)
+    assert isinstance(client, Client)
     return client
+
 
 def test_keys(client):
     # TODO this test is a little flakey after the update call
@@ -36,56 +40,6 @@ def test_keys(client):
 
     client.keys.delete(new_id)
     assert len(client.keys.list()) == len(old_keys)
-
-
-@pytest.mark.slow
-def test_droplets(client):
-    """
-    WARNING this test takes a while :)
-    """
-    assert hasattr(client, 'droplets')
-    assert isinstance(client.droplets, P.Droplets)
-    old_droplets = client.droplets.list() # it works
-
-    name = 'test-droplet'
-    region = 'sfo1'
-    size = '512mb'
-    id = client.images.list()[0]['id']
-    image = client.images.get(id)
-
-    client.droplets.create(name, region, size, image.id)
-    droplet = client.droplets.by_name(name)
-
-    try:
-        # verify we got what we made
-        assert isinstance(droplet, P.DropletActions)
-        assert droplet.droplet_name == name
-        assert droplet.region['slug'] == region
-        assert droplet.size['slug'] == size
-        assert droplet.image['slug'] == image.slug
-
-        assert len(client.droplets.list()) > len(old_droplets)
-
-        # just check that the request works for now
-        droplet.kernels()
-        old_snapshots = droplet.snapshots()
-        droplet.backups()
-
-        # A few actions
-        # power off
-        droplet.power_off()
-        # take snapshot
-        droplet.take_snapshot('foobarbaz')
-        new_snapshots = droplet.snapshots()
-        assert len(new_snapshots) > len(old_snapshots)
-        for x in new_snapshots:
-            if x['name'] == 'foobarbaz':
-                snapshot = x
-        client.images.delete(snapshot['id'])
-    finally:
-        droplet.delete()
-
-    assert len(client.droplets.list()) == len(old_droplets)
 
 
 def test_regions(client):

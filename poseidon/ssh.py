@@ -1,7 +1,12 @@
 import os
+import getpass
 from cStringIO import StringIO
+
+# make these optional so not everyone has to build C binaries
 try:
     import pandas as pd
+    if pd.__version__ <= '0.13.1':
+        raise ImportError
     has_pandas = True
 except ImportError:
     has_pandas = False
@@ -19,17 +24,26 @@ class SSHClient(object):
     Thin wrapper to connect to client over SSH and execute commands
     """
 
-    def __init__(self, host, username='root', password=None):
+    def __init__(self, host, username='root', password=None, port=None,
+                 interactive=False):
+        """
+        Parameters
+        ----------
+        interactive: bool, default False
+            If True then prompts for password whenever necessary
+        """
         self.host = host
+        self.port = port
         self.username = username
         self.password = password
+        self.interactive = interactive
         self._con = None
 
     @property
     def con(self):
         if self._con is None:
             self._connect()
-        return self.con
+        return self._con
 
     def _connect(self):
         if not has_paramiko:
@@ -37,8 +51,17 @@ class SSHClient(object):
         self._con = paramiko.SSHClient()
         self._con.set_missing_host_key_policy(
             paramiko.AutoAddPolicy())
-        self._con.connect(self.host, username=self.username,
-                          password=self.password)
+        kwargs = {}
+        for k in ['username', 'password', 'port']:
+            if hasattr(self, k):
+                kwargs[k] = getattr(self, k)
+        self._con.connect(self.host, **kwargs)
+
+    def add_public_key(self, key_path):
+        self.password = self.validate_password(self.password)
+        key_contents = open(os.path.expanduser(key_path)).read()
+        cmd = 'mkdir -p ~/.ssh && cat "%s"  ~/.ssh/authorized_keys'
+        self.wait(cmd % key_contents)
 
     def close(self):
         if self._con is not None:
@@ -54,21 +77,27 @@ class SSHClient(object):
         -------
         (stdin, stdout, stderr)
         """
-        return self._con.exec_command(cmd)
+        return self.con.exec_command(cmd)
 
-    def wait(self, cmd):
+    def wait(self, cmd, raise_on_error=True):
         """
         Execute command and wait for it to finish. Proceed with caution because
         if you run a command that causes a prompt this will hang
         """
-        return self._wrap_cmd(cmd)
+        _, stdout, stderr = self.exec_command(cmd)
+        stdout.channel.recv_exit_status()
+        output = stdout.read()
+        errors = stderr.read()
+        if errors and raise_on_error:
+            raise ValueError(errors)
+        return output
 
     def nohup(self, cmd):
         """
-        Execute the command using nohup
+        Execute the command using nohup and &
         """
         cmd = "nohup %s &" % cmd
-        self._con.exec_command(cmd)
+        self.exec_command(cmd)
 
     def sudo(self, password=None):
         """
@@ -76,33 +105,28 @@ class SSHClient(object):
         """
         if self.username == 'root':
             raise ValueError('Already root user')
-        if password is None:
-            password = self.password
-        if password is None:
-            raise ValueError("Password must not be empty")
+        password = self.validate_password(password)
         stdin, stdout, stderr = self.exec_command('sudo su')
         stdin.write("%s\n" % password)
         stdin.flush()
-        output = stdout.read()
         errors = stderr.read()
         if errors:
             raise ValueError(errors)
-        return output
+
+    def validate_password(self, password):
+        if password is None:
+            password = self.password
+        if password is None and self.interactive:
+            password = getpass.getpass()
+        if password is None:
+            raise ValueError("Password must not be empty")
+        return password
 
     def unsudo(self):
         """
         Assume already in sudo
         """
-        return self._wrap_cmd('exit')
-
-    def _wrap_cmd(self, cmd, raise_on_error=True):
-        _, stdin, stdout, stderr = self.exec_command(cmd)
-        stdout.channel.recv_exit_status()
-        output = stdout.read()
-        errors = stderr.read()
-        if errors and raise_on_error:
-            raise ValueError(errors)
-        return output
+        self.wait('exit')
 
     def apt(self, package_names, raise_on_error=True):
         """
@@ -118,13 +142,13 @@ class SSHClient(object):
         if isinstance(package_names, basestring):
             package_names = [package_names]
         cmd = "apt-get install -y --force-yes %s" % (' '.join(package_names))
-        return self._wrap_cmd(cmd, raise_on_error=raise_on_error)
+        return self.wait(cmd, raise_on_error=raise_on_error)
 
     def curl(self, url, raise_on_error=True, **kwargs):
         import simplejson as json
         def format_param(name):
             if len(name) == 1:
-                prefix = '='
+                prefix = '-'
             else:
                 prefix = '--'
             return prefix + name
@@ -133,9 +157,9 @@ class SSHClient(object):
                 return ''
             return json.dumps(value)
         options = ['%s %s' % (format_param(k), format_value(v))
-                   for k, v in kwargs]
+                   for k, v in kwargs.items()]
         cmd = 'curl %s "%s"' % (' '.join(options), url)
-        return self._wrap_cmd(cmd, raise_on_error=raise_on_error)
+        return self.wait(cmd, raise_on_error=raise_on_error)
 
     def pip(self, package_names, raise_on_error=True):
         """
@@ -151,14 +175,14 @@ class SSHClient(object):
         if isinstance(package_names, basestring):
             package_names = [package_names]
         cmd = "pip install -U %s" % (' '.join(package_names))
-        return self._wrap_cmd(cmd, raise_on_error=raise_on_error)
+        return self.wait(cmd, raise_on_error=raise_on_error)
 
     def pip_freeze(self, raise_on_error=True):
         """
         Run `pip freeze` and return output
         Waits for command to finish.
         """
-        return self._wrap_cmd('pip freeze', raise_on_error=raise_on_error)
+        return self.wait('pip freeze', raise_on_error=raise_on_error)
 
     def pip_r(self, requirements, raise_on_error=True):
         """
@@ -173,21 +197,25 @@ class SSHClient(object):
             If True then raise ValueError if stderr is not empty
         """
         cmd = "pip install -r %s" % os.path.expanduser(requirements)
-        return self._wrap_cmd(cmd, raise_on_error=raise_on_error)
+        return self.wait(cmd, raise_on_error=raise_on_error)
 
-    def ps(self, options=None, all=True, verbose=True, as_frame=True,
-           raise_on_error=True):
-        if options is None:
-            options = ''
+    def ps(self, args=None, options='', all=True, verbose=True,
+           as_frame='auto', raise_on_error=True):
+        if args is None:
+            args = ''
         if all:
-            options += 'A'
+            args += 'A'
         if verbose:
-            options += 'f'
-        if len(options) > 0 and options[0] != '-':
-            options = '-' + options
+            args += 'f'
+        if len(args) > 0 and args[0] != '-':
+            args = '-' + args
 
-        results = self._wrap_cmd('ps %s' % options,
-                                 raise_on_error=raise_on_error)
+        results = self.wait(('ps %s %s' % (args, options)).strip(),
+                            raise_on_error=raise_on_error)
+
+        if as_frame == 'auto':
+            as_frame = has_pandas
+
         if as_frame:
             if not has_pandas:
                 raise ImportError("Unable to import pandas")
@@ -201,3 +229,9 @@ class SSHClient(object):
             return df
 
         return results
+
+    def top(self):
+        return self.ps('o', TOP_OPTIONS)
+
+
+TOP_OPTIONS = '%cpu,%mem,user,comm'
