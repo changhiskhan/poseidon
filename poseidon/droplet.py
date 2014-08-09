@@ -214,5 +214,4 @@ class DropletActions(Resource):
         Open SSH connection to droplet
         """
         rs = SSHClient(self.ip_address, interactive=interactive)
-        rs.con
         return rs

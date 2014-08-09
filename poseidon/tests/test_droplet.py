@@ -133,9 +133,9 @@ def test_reboot(client, fixture):
 def test_shutdown(client, fixture):
     resp = fixture.droplet.shutdown()
     assert resp['action']['type'] == 'shutdown'
-    # HURF
+    # shutdown is 'best efforts'
     if client.droplets.get(fixture.droplet.id).status == 'off':
-        fixture.droplet.power_on()
+        resp = fixture.droplet.power_on()
         assert resp['action']['type'] == 'power_on'
         assert client.droplets.get(fixture.droplet.id).status == 'active'
 

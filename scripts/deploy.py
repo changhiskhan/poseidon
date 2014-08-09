@@ -21,7 +21,7 @@ records = con.domains.create('example.changshe.io', droplet.ip_address)
 records.create('A', data=droplet.ip_address)
 ssh = droplet.connect()
 ssh.apt('git python-pip')
-ssh.git('changhiskhan', 'hello_world')
+ssh.git(username='changhiskhan', repo='hello_world')
 ssh.chdir('hello_world')
 ssh.pip_r('requirements.txt')
 ssh.nohup('python app.py') # flask goes to ip:5000 by default, DNS takes a while
