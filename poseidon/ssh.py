@@ -196,7 +196,7 @@ class SSHClient(object):
         raise_on_error: bool, default True
             If True then raise ValueError if stderr is not empty
         """
-        cmd = "pip install -r %s" % os.path.expanduser(requirements)
+        cmd = "pip install -r %s" % requirements
         return self.wait(cmd, raise_on_error=raise_on_error)
 
     def ps(self, args=None, options='', all=True, verbose=True,
@@ -233,5 +233,22 @@ class SSHClient(object):
     def top(self):
         return self.ps('o', TOP_OPTIONS)
 
+    def git(self, username, repo, alias=None, token=None):
+        """
+        Parameters
+        ----------
+        token: str, default None
+            Assumes you have GITHUB_TOKEN in envvar if None
+
+        https://github.com/blog/1270-easier-builds-and-deployments-using-git-
+        over-https-and-oauth
+        """
+        if alias is None:
+            alias = repo
+        if token is None:
+            token = os.environ.get('GITHUB_TOKEN')
+        self.wait('mkdir -p %s && cd %s' % (alias, alias))
+        self.wait('git init && git pull https://%s@github.com/%s/%.git' %
+                  (token, username, repo))
 
 TOP_OPTIONS = '%cpu,%mem,user,comm'

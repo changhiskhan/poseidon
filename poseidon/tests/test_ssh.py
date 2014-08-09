@@ -191,7 +191,6 @@ def test_pip_r(client, mock):
     mock.patch.object(S.SSHClient, 'wait')
     fdir = '~/poseidon/requirements.txt'
     client.pip_r(fdir)
-    fdir = os.path.expanduser(fdir)
     client.wait.assert_called_with('pip install -r %s' % fdir,
                                    raise_on_error=True)
 

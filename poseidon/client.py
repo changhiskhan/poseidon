@@ -1,6 +1,6 @@
 from poseidon.api import (
-    API_URL, API_VERSION, DigitalOceanAPI, Actions, Domains, Images, Keys,
-    Regions, Sizes)
+    API_URL, API_VERSION, DigitalOceanAPI, Actions, Domains, DomainRecords,
+    Images, Keys, Regions, Sizes)
 from poseidon.droplet import Droplets
 
 
@@ -24,6 +24,7 @@ class Client(object):
         self.api = DigitalOceanAPI(api_key, api_url, api_version)
         self.actions = Actions(self.api)
         self.domains = Domains(self.api)
+        self.records = DomainRecords(self.api)
         self.droplets = Droplets(self.api)
         self.images = Images(self.api)
         self.keys = Keys(self.api)

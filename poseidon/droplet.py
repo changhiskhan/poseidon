@@ -171,17 +171,36 @@ class DropletActions(Resource):
             if not slept:
                 break
 
-    def connect(self, ipv6=False, interactive=False):
+    @property
+    def ip_address(self):
         """
-        Open SSH connection to droplet
+        Public ip_address
         """
-        if ipv6:
-            raise NotImplementedError()
         ip = None
         for eth in self.networks['v4']:
             if eth['type'] == 'public':
                 ip = eth['ip_address']
                 break
         if ip is None:
-            raise ValueError("No public IP found. Huh?")
-        return SSHClient(ip, interactive=interactive)
+            raise ValueError("No public IP found")
+        return ip
+
+    @property
+    def private_ip(self):
+        """
+        Private ip_address
+        """
+        ip = None
+        for eth in self.networks['v4']:
+            if eth['type'] == 'private':
+                ip = eth['ip_address']
+                break
+        if ip is None:
+            raise ValueError("No private IP found")
+        return ip
+
+    def connect(self, interactive=False):
+        """
+        Open SSH connection to droplet
+        """
+        return SSHClient(self.ip_address, interactive=interactive)
