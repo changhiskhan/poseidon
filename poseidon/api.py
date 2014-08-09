@@ -10,7 +10,6 @@ actions that your situation requires.
 """
 
 import os
-import time
 import requests
 import simplejson as json
 
@@ -53,8 +52,8 @@ class RestAPI(object):
         url = self.format_request_url(resource, *url_components)
         meth = getattr(requests, kind)
         headers = self.get_request_headers()
-        data = self.format_parameters(**kwargs)
-        req = meth(url, headers=headers, data=data)
+        req_data = self.format_parameters(**kwargs)
+        req = meth(url, headers=headers, data=req_data)
         data = self.get_response(req)
         if req.status_code >= 300:
             msg = data.pop('message', 'API request returned error')
@@ -74,7 +73,12 @@ class RestAPI(object):
         raise NotImplementedError()
 
     def format_parameters(self, **kwargs):
-        return kwargs
+        req_data = {}
+        for k, v in kwargs.items():
+            if isinstance(v, (list, tuple)):
+                k = k + '[]'
+            req_data[k] = v
+        return req_data
 
 
 
@@ -214,121 +218,6 @@ class MutableCollection(ResourceCollection):
 
 
 
-class DropletActions(Resource):
-    """
-    Droplet actions are tasks that can be executed on a Droplet. These can be
-    things like rebooting, resizing, snapshotting, etc.
-
-    Droplet action requests are generally targeted at the "actions" endpoint
-    for a specific Droplet. The specific actions are usually initiated by
-    sending a POST request with the action and arguments as parameters.
-
-    Droplet actions themselves create a Droplet actions object. These can be
-    used to get information about the status of an action.
-    """
-    def __init__(self, api, collection, **kwargs):
-        super(DropletActions, self).__init__(api)
-        self.id = kwargs.pop('id')
-        self.parent = collection
-        for k, v in kwargs.iteritems():
-            if k == 'name':
-                k = 'droplet_name'
-            setattr(self, k, v)
-
-    @property
-    def name(self):
-        return 'droplets/%s/actions' % self.id
-
-    def get_action(self, action_id):
-        return self.get((action_id,)).get('action')
-
-    def _action(self, type, wait=True, **kwargs):
-        result = self.post(type=type, **kwargs)
-        if wait:
-            self.wait()
-        return result
-
-    def reboot(self, wait=True):
-        return self._action('reboot', wait)
-
-    def power_cycle(self, wait=True):
-        return self._action('power_cycle', wait)
-
-    def shutdown(self, wait=True):
-        return self._action('shutdown', wait)
-
-    def power_off(self, wait=True):
-        return self._action('power_off', wait)
-
-    def power_on(self, wait=True):
-        return self._action('power_on', wait)
-
-    def password_reset(self, wait=True):
-        return self._action('password_reset', wait)
-
-    def enable_ipv6(self, wait=True):
-        return self._action('enable_ipv6', wait)
-
-    def disable_backups(self, wait=True):
-        return self._action('disable_backups', wait)
-
-    def enable_private_networking(self, wait=True):
-        return self._action('enable_private_networking', wait)
-
-    def resize(self, size, wait=True):
-        return self._action('resize', size=size, wait=wait)
-
-    def restore(self, image, wait=True):
-        return self._action('restore', image=image, wait=wait)
-
-    def rebuild(self, image, wait=True):
-        return self._action('rebuild', image=image, wait=wait)
-
-    def rename(self, name, wait=True):
-        return self._action('rename', name=name, wait=wait)
-
-    def change_kernel(self, kernel_id, wait=True):
-        return self._action('change_kernel', kernel=kernel_id, wait=wait)
-
-    def take_snapshot(self, name, wait=True):
-        return self._action('snapshot', name=name, wait=wait)
-
-    def kernels(self):
-        return self.parent.kernels(self.id)
-
-    def snapshots(self):
-        return self.parent.snapshots(self.id)
-
-    def backups(self):
-        return self.parent.backups(self.id)
-
-    def actions(self):
-        return self.parent.actions(self.id)
-
-    def delete(self, wait=True):
-        resp = self.parent.delete(self.id)
-        if wait:
-            self.wait()
-        return resp
-
-    def wait(self):
-        """
-        wait for all actions to complete on a droplet
-        """
-        interval_seconds = 5
-        while True:
-            actions = self.actions()
-            slept = False
-            for a in actions:
-                if a['status'] == 'in-progress':
-                    # n.b. gevent will monkey patch
-                    time.sleep(interval_seconds)
-                    slept = True
-                    break
-            if not slept:
-                break
-
-
 class ImageActions(Resource):
     """
     Image actions are commands that can be given to a DigitalOcean image.
@@ -359,59 +248,6 @@ class ImageActions(Resource):
 # ----------------------------------------------------------------------
 # Mutable collections
 # ----------------------------------------------------------------------
-
-class Droplets(MutableCollection):
-    """
-    A Droplet is a DigitalOcean virtual machine. By sending requests to the
-    Droplet endpoint, you can list, create, or delete Droplets.
-
-    Some of the attributes will have an object value. The region, image, and
-    size objects will all contain the standard attributes of their associated
-    types. Find more information about each of these objects in their
-    respective sections.
-    """
-
-    name = 'droplets'
-
-    def kernels(self, id):
-        return self._prop(id, 'kernels')
-
-    def snapshots(self, id):
-        return self._prop(id, 'snapshots')
-
-    def backups(self, id):
-        return self._prop(id, 'backups')
-
-    def actions(self, id):
-        return self._prop(id, 'actions')
-
-    def _prop(self, id, prop):
-        return super(MutableCollection, self).get((id, prop))[prop]
-
-    def create(self, name, region, size, image, ssh_keys=None,
-               backups=None, ipv6=None, private_networking=None, wait=True):
-        resp = self.post(name=name, region=region, size=size, image=image,
-                         ssh_keys=ssh_keys, backups=backups, ipv6=ipv6,
-                         private_networking=private_networking)
-        droplet = self.get(resp[self.singular]['id'])
-        if wait:
-            droplet.wait()
-        return droplet
-
-    def get(self, id):
-        info = super(Droplets, self).get(id)
-        return DropletActions(self.api, self, **info)
-
-    def by_name(self, name):
-        for d in self.list():
-            if d['name'] == name:
-                return self.get(d['id'])
-        raise KeyError("Could not find droplet with name %s" % name)
-
-    def update(self, id, **kwargs):
-        raise NotImplementedError("Not supported by API")
-
-
 
 class Images(MutableCollection):
     """
@@ -470,15 +306,20 @@ class Domains(MutableCollection):
     name = 'domains'
 
     def create(self, name, ip_address):
-        return (self.post(name=name, ip_address=ip_address)
-                .get(self.singular, None))
+        (self.post(name=name, ip_address=ip_address)
+         .get(self.singular, None))
+        return self.records(name)
+
+    def records(self, name):
+        if self.get(name):
+            return DomainRecords(self.api, name)
 
     def update(self, id, **kwargs):
         raise NotImplementedError()
 
 
 
-class DomainRecord(MutableCollection):
+class DomainRecords(MutableCollection):
     """
     Domain record resources are used to set or retrieve information about the
     individual DNS records configured for a domain. This allows you to build
@@ -499,11 +340,13 @@ class DomainRecord(MutableCollection):
 
     def create(self, type, name=None, data=None, priority=None,
                port=None, weight=None):
+        if type == 'A' and name is None:
+            name = self.domain
         return self.post(type=type, name=name, data=data, priority=priority,
                          port=port, weight=weight)
 
     def get(self, id, **kwargs):
-        return (super(DomainRecord, self).get((id,), **kwargs)
+        return (super(DomainRecords, self).get((id,), **kwargs)
                 .get('domain_record', None))
 
 
@@ -564,36 +407,3 @@ class Actions(ResourceCollection):
     def get(self, id, **kwargs):
         return (super(Actions, self).get((id,), **kwargs)
                 .get(self.singular, None))
-
-
-
-# ----------------------------------------------------------------------
-# API Client
-# ----------------------------------------------------------------------
-
-class Client(object):
-    """
-    The DigitalOcean API allows you to manage Droplets and resources within the
-    DigitalOcean cloud in a simple, programmatic way using conventional HTTP
-    requests. The endpoints are intuitive and powerful, allowing you to easily
-    make calls to retrieve information or to execute actions.
-
-    All of the functionality that you are familiar with in the DigitalOcean
-    control panel is also available through the API, allowing you to script the
-    complex actions that your situation requires.
-    """
-
-    def __init__(self, api_key=None, api_url=API_URL, api_version=API_VERSION):
-        self.api = DigitalOceanAPI(api_key, api_url, api_version)
-        self.actions = Actions(self.api)
-        self.domains = Domains(self.api)
-        self.droplets = Droplets(self.api)
-        self.images = Images(self.api)
-        self.keys = Keys(self.api)
-        self.regions = Regions(self.api)
-        self.sizes = Sizes(self.api)
-
-
-
-def connect(api_key=None, api_url=API_URL, api_version=API_VERSION):
-    return Client(api_key, api_url, api_version)

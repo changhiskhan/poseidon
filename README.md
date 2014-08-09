@@ -3,6 +3,9 @@ poseidon
 
 Python library for managing your Digital Ocean account via API v2
 
+[![PyPi version](https://pypip.in/v/poseidon/badge.png)](https://crate.io/packages/poseidon/)
+[![PyPi downloads](https://pypip.in/d/poseidon/badge.png)](https://crate.io/packages/poseidon/)
+
 The DigitalOcean API allows you to manage Droplets and resources within the
 DigitalOcean cloud in a simple, programmatic way using conventional HTTP
 requests. The endpoints are intuitive and powerful, allowing you to easily make

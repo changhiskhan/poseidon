@@ -1,1 +1,4 @@
+pandas>=0.13.0
+paramiko>=0.14.0
 requests>=2.3.0
+simplejson>=3.5.3
