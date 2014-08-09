@@ -34,12 +34,22 @@ class Droplets(MutableCollection):
 
     def create(self, name, region, size, image, ssh_keys=None,
                backups=None, ipv6=None, private_networking=None, wait=True):
+        """
+        Parameters
+        ----------
+        ssh_keys: list, optional
+        """
+        if ssh_keys and not isinstance(ssh_keys, (list, tuple)):
+            raise TypeError("ssh_keys must be a list")
         resp = self.post(name=name, region=region, size=size, image=image,
-                         ssh_keys=ssh_keys, backups=backups, ipv6=ipv6,
-                         private_networking=private_networking)
+                         ssh_keys=ssh_keys,
+                         private_networking=private_networking,
+                         backups=backups, ipv6=ipv6)
         droplet = self.get(resp[self.singular]['id'])
         if wait:
             droplet.wait()
+        # HACK sometimes the IP address doesn't return correctly
+        droplet = self.get(resp[self.singular]['id'])
         return droplet
 
     def get(self, id):
@@ -203,4 +213,6 @@ class DropletActions(Resource):
         """
         Open SSH connection to droplet
         """
-        return SSHClient(self.ip_address, interactive=interactive)
+        rs = SSHClient(self.ip_address, interactive=interactive)
+        rs.con
+        return rs

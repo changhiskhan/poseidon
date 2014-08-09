@@ -52,8 +52,8 @@ class RestAPI(object):
         url = self.format_request_url(resource, *url_components)
         meth = getattr(requests, kind)
         headers = self.get_request_headers()
-        data = self.format_parameters(**kwargs)
-        req = meth(url, headers=headers, data=data)
+        req_data = self.format_parameters(**kwargs)
+        req = meth(url, headers=headers, data=req_data)
         data = self.get_response(req)
         if req.status_code >= 300:
             msg = data.pop('message', 'API request returned error')
@@ -73,7 +73,12 @@ class RestAPI(object):
         raise NotImplementedError()
 
     def format_parameters(self, **kwargs):
-        return kwargs
+        req_data = {}
+        for k, v in kwargs.items():
+            if isinstance(v, (list, tuple)):
+                k = k + '[]'
+            req_data[k] = v
+        return req_data
 
 
 
@@ -301,15 +306,20 @@ class Domains(MutableCollection):
     name = 'domains'
 
     def create(self, name, ip_address):
-        return (self.post(name=name, ip_address=ip_address)
-                .get(self.singular, None))
+        (self.post(name=name, ip_address=ip_address)
+         .get(self.singular, None))
+        return self.records(name)
+
+    def records(self, name):
+        if self.get(name):
+            return DomainRecords(self.api, name)
 
     def update(self, id, **kwargs):
         raise NotImplementedError()
 
 
 
-class DomainRecord(MutableCollection):
+class DomainRecords(MutableCollection):
     """
     Domain record resources are used to set or retrieve information about the
     individual DNS records configured for a domain. This allows you to build
@@ -330,11 +340,13 @@ class DomainRecord(MutableCollection):
 
     def create(self, type, name=None, data=None, priority=None,
                port=None, weight=None):
+        if type == 'A' and name is None:
+            name = self.domain
         return self.post(type=type, name=name, data=data, priority=priority,
                          port=port, weight=weight)
 
     def get(self, id, **kwargs):
-        return (super(DomainRecord, self).get((id,), **kwargs)
+        return (super(DomainRecords, self).get((id,), **kwargs)
                 .get('domain_record', None))
 
 

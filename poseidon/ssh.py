@@ -37,6 +37,7 @@ class SSHClient(object):
         self.username = username
         self.password = password
         self.interactive = interactive
+        self.pwd = '~'
         self._con = None
 
     @property
@@ -53,9 +54,14 @@ class SSHClient(object):
             paramiko.AutoAddPolicy())
         kwargs = {}
         for k in ['username', 'password', 'port']:
-            if hasattr(self, k):
+            if getattr(self, k, None):
                 kwargs[k] = getattr(self, k)
         self._con.connect(self.host, **kwargs)
+
+    def chdir(self, new_pwd, relative=True):
+        if new_pwd and self.pwd and relative:
+            new_pwd = os.path.join(self.pwd, new_pwd)
+        self.pwd = new_pwd
 
     def add_public_key(self, key_path):
         self.password = self.validate_password(self.password)
@@ -77,6 +83,10 @@ class SSHClient(object):
         -------
         (stdin, stdout, stderr)
         """
+        if self.pwd is not None:
+            cmd = 'cd %s ; %s' % (self.pwd, cmd)
+        if self.interactive:
+            print cmd
         return self.con.exec_command(cmd)
 
     def wait(self, cmd, raise_on_error=True):
@@ -87,7 +97,11 @@ class SSHClient(object):
         _, stdout, stderr = self.exec_command(cmd)
         stdout.channel.recv_exit_status()
         output = stdout.read()
+        if self.interactive:
+            print output
         errors = stderr.read()
+        if self.interactive:
+            print errors
         if errors and raise_on_error:
             raise ValueError(errors)
         return output
@@ -128,20 +142,21 @@ class SSHClient(object):
         """
         self.wait('exit')
 
-    def apt(self, package_names, raise_on_error=True):
+    def apt(self, package_names, raise_on_error=False):
         """
-        Install specified packages using apt-get. -y and --force-yes options are
+        Install specified packages using apt-get. -y options are
         automatically used. Waits for command to finish.
 
         Parameters
         ----------
         package_names: list-like of str
-        raise_on_error: bool, default True
+        raise_on_error: bool, default False
             If True then raise ValueError if stderr is not empty
+            debconf often gives tty error
         """
         if isinstance(package_names, basestring):
             package_names = [package_names]
-        cmd = "apt-get install -y --force-yes %s" % (' '.join(package_names))
+        cmd = "apt-get install -y %s" % (' '.join(package_names))
         return self.wait(cmd, raise_on_error=raise_on_error)
 
     def curl(self, url, raise_on_error=True, **kwargs):
@@ -247,8 +262,15 @@ class SSHClient(object):
             alias = repo
         if token is None:
             token = os.environ.get('GITHUB_TOKEN')
-        self.wait('mkdir -p %s && cd %s' % (alias, alias))
-        self.wait('git init && git pull https://%s@github.com/%s/%.git' %
-                  (token, username, repo))
+        self.wait('mkdir -p %s' % alias)
+        old_dir = self.pwd
+        try:
+            self.chdir(alias, relative=True)
+            cmd = 'git init && git pull https://%s@github.com/%s/%s.git'
+            # last line to stderr
+            return self.wait(cmd % (token, username, repo),
+                             raise_on_error=False)
+        finally:
+            self.chdir(old_dir, relative=False)
 
 TOP_OPTIONS = '%cpu,%mem,user,comm'
