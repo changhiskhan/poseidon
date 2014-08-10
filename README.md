@@ -21,6 +21,7 @@ make it easier to manage, provision, and deploy to Digital Ocean.
 
 Setup
 -----
+
 `pip install -U poseidon`
 
 To run the unit tests make sure you have the `pytest` module.
@@ -29,6 +30,7 @@ If not, run `pip install -U pytest`
 
 Examples
 --------
+
 Setup authentication by generating an API key and exporting it as the value of the
 `DIGITALOCEAN_API_KEY` environment variable.
 
@@ -42,8 +44,9 @@ client = po.connect() # or po.connect(api_key=<KEY>) for custom api key
 ### Create a droplet
 ```
 image_id = 135123 # replace with your own
+key_id = 175235 # e.g., client.keys.list()[0]['id']
 droplet = client.droplets.create(name='test', region='sfo1', size='512mb',
-                                 image=image_id)
+                                 image=image_id, ssh_keys=[key_id])
 ```
 
 ### Programmatically create a snapshot
@@ -56,6 +59,52 @@ droplet.take_snapshot('test-snapshot')
 ```
 snapshots = droplet.snapshots() # one of these should be named 'test-snapshot'
 ```
+
+### Issuing commands to the droplet via SSH
+poseidon connects to your droplet via SSH using the `paramiko` library
+
+#### Create a connection
+
+```
+ssh = droplet.connect()
+```
+
+#### Install system packages
+
+```
+ssh.apt('git python-pip')
+```
+
+#### Clone a github repo
+
+```
+# requires GITHUB_TOKEN envvar
+ssh.git(username='changhiskhan', repo='hello_world')
+```
+
+#### Change directory
+
+```
+ssh.chdir('hello_world')
+```
+
+#### pip install -r
+`ssh.pip_r('requirements.txt')`
+
+#### Launch application
+```
+ssh.nohup('python app.py')
+```
+
+#### Check processes
+```
+print ssh.ps()
+```
+
+
+
+Other API Features
+------------------
 
 ### Other simple droplet commands
 ```
@@ -153,9 +202,3 @@ tests/test_api.py@145::test_images PASSED
 ============================ 1 tests deselected by "-m 'not slow'" =============================
 ============================ 7 passed, 1 deselected in 6.85 seconds ============================
 ```
-
-TODO
-----
-1. Refactor the result format to allow for easy multipage resultset paging
-2. Additional unit tests
-3. Tools for scaling, provisioning, deployment

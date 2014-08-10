@@ -1,6 +1,7 @@
 import os
 import getpass
 from cStringIO import StringIO
+import paramiko
 
 # make these optional so not everyone has to build C binaries
 try:
@@ -10,13 +11,6 @@ try:
     has_pandas = True
 except ImportError:
     has_pandas = False
-
-try:
-    import paramiko
-    has_paramiko = True
-except ImportError:
-    has_paramiko = False
-
 
 
 class SSHClient(object):
@@ -47,8 +41,6 @@ class SSHClient(object):
         return self._con
 
     def _connect(self):
-        if not has_paramiko:
-            raise ImportError("Unable to import paramiko")
         self._con = paramiko.SSHClient()
         self._con.set_missing_host_key_policy(
             paramiko.AutoAddPolicy())

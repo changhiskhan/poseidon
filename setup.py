@@ -33,6 +33,7 @@ setup(
     description=DESCRIPTION,
     package_data={'': ['requirements.txt']},
     install_requires = [
-        'requests'
+        'requests',
+        'paramiko',
     ],
 )

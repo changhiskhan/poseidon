@@ -213,11 +213,3 @@ To only run the other tests, use the "not slow" marker from "pytest":
 
     ============================ 1 tests deselected by "-m 'not slow'" =============================
     ============================ 7 passed, 1 deselected in 6.85 seconds ============================
-
-
-TODO
-****
-
-1. Refactor the result format to allow for easy multipage resultset paging
-2. Additional unit tests
-3. Tools for scaling, provisioning, deployment
