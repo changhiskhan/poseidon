@@ -186,6 +186,9 @@ class DropletActions(Resource):
         return 'droplets/%s/actions' % self.id
 
     def get_action(self, action_id):
+        """
+        Retrieve a single action based on action_id
+        """
         return self.get((action_id,)).get('action')
 
     def _action(self, type, wait=True, **kwargs):
@@ -195,63 +198,258 @@ class DropletActions(Resource):
         return result
 
     def reboot(self, wait=True):
+        """
+        According to DigitalOcean API this is best efforts only
+
+        Parameters
+        ----------
+        wait: bool, default True
+            Whether to block until the pending action is completed
+        """
         return self._action('reboot', wait)
 
     def power_cycle(self, wait=True):
+        """
+        Hard reset
+
+        Parameters
+        ----------
+        wait: bool, default True
+            Whether to block until the pending action is completed
+        """
         return self._action('power_cycle', wait)
 
     def shutdown(self, wait=True):
+        """
+        According to DigitalOcean API this is best efforts only
+
+        Parameters
+        ----------
+        wait: bool, default True
+            Whether to block until the pending action is completed
+        """
         return self._action('shutdown', wait)
 
     def power_off(self, wait=True):
+        """
+        Equivalent to hitting the power button. This is a "hard shutoff"
+
+        Parameters
+        ----------
+        wait: bool, default True
+            Whether to block until the pending action is completed
+        """
         return self._action('power_off', wait)
 
     def power_on(self, wait=True):
+        """
+        Turn on this droplet.
+
+        Parameters
+        ----------
+        wait: bool, default True
+            Whether to block until the pending action is completed
+
+        Raises
+        ------
+        APIError if droplet is already powered on
+        """
         return self._action('power_on', wait)
 
     def password_reset(self, wait=True):
+        """
+        Send password reset email for this droplet
+
+        Parameters
+        ----------
+        wait: bool, default True
+            Whether to block until the pending action is completed
+        """
         return self._action('password_reset', wait)
 
     def enable_ipv6(self, wait=True):
+        """
+        Turn on IPv6 networking for this droplet
+
+        Parameters
+        ----------
+        wait: bool, default True
+            Whether to block until the pending action is completed
+
+        Raises
+        ------
+        APIError if region does not support IPv6
+        """
         return self._action('enable_ipv6', wait)
 
     def disable_backups(self, wait=True):
+        """
+        Disable automatic backups for the droplet. Automatic backups
+        can only be turned on at droplet creation
+
+        Parameters
+        ----------
+        wait: bool, default True
+            Whether to block until the pending action is completed
+
+        Raises
+        ------
+        APIError if region does not support IPv6
+        """
         return self._action('disable_backups', wait)
 
     def enable_private_networking(self, wait=True):
+        """
+        Turn on private networking for this droplet. Private networking
+        enables non-public IP for droplet
+
+        Parameters
+        ----------
+        wait: bool, default True
+            Whether to block until the pending action is completed
+
+        Raises
+        ------
+        APIError if region does not support private networking
+        """
         return self._action('enable_private_networking', wait)
 
     def resize(self, size, wait=True):
+        """
+        Change the size of this droplet (must be powered off)
+
+        Parameters
+        ----------
+        size: str
+            size slug, e.g., 512mb
+        wait: bool, default True
+            Whether to block until the pending action is completed
+        """
         return self._action('resize', size=size, wait=wait)
 
     def restore(self, image, wait=True):
+        """
+        Restore this droplet with given image id
+
+        A Droplet restoration will rebuild an image using a backup image.
+        The image ID that is passed in must be a backup of the current Droplet
+        instance. The operation will leave any embedded SSH keys intact.
+
+        Parameters
+        ----------
+        image: int or str
+            int for image id and str for image slug
+        wait: bool, default True
+            Whether to block until the pending action is completed
+        """
         return self._action('restore', image=image, wait=wait)
 
     def rebuild(self, image, wait=True):
+        """
+        Rebuild this droplet with given image id
+
+        Parameters
+        ----------
+        image: int or str
+            int for image id and str for image slug
+        wait: bool, default True
+            Whether to block until the pending action is completed
+        """
         return self._action('rebuild', image=image, wait=wait)
 
     def rename(self, name, wait=True):
+        """
+        Change the name of this droplet
+
+        Parameters
+        ----------
+        name: str
+            New name for the droplet
+        wait: bool, default True
+            Whether to block until the pending action is completed
+
+        Raises
+        ------
+        APIError if region does not support private networking
+        """
         return self._action('rename', name=name, wait=wait)
 
     def change_kernel(self, kernel_id, wait=True):
+        """
+        Change the kernel of this droplet
+
+        Parameters
+        ----------
+        kernel_id: int
+            Can be retrieved from output of self.kernels()
+        wait: bool, default True
+            Whether to block until the pending action is completed
+
+        Raises
+        ------
+        APIError if region does not support private networking
+        """
         return self._action('change_kernel', kernel=kernel_id, wait=wait)
 
     def take_snapshot(self, name, wait=True):
+        """
+        Take a snapshot of this droplet (must be powered off)
+
+        Parameters
+        ----------
+        name: str
+            Name of the snapshot
+        wait: bool, default True
+            Whether to block until the pending action is completed
+        """
         return self._action('snapshot', name=name, wait=wait)
 
     def kernels(self):
+        """
+        List of available kernels for this droplet
+
+        Example
+        -------
+        [{
+          "id": 61833229,
+          "name": "Ubuntu 14.04 x32 vmlinuz-3.13.0-24-generic",
+          "version": "3.13.0-24-generic"
+         },
+         {
+          "id": 485432972,
+          "name": "Ubuntu 14.04 x64 vmlinuz-3.13.0-24-generic (1221)",
+          "version": "3.13.0-24-generic"
+         }]
+        """
         return self.parent.kernels(self.id)
 
     def snapshots(self):
+        """
+        List of snapshots that have been created for this droplet
+        """
         return self.parent.snapshots(self.id)
 
     def backups(self):
+        """
+        List of automated backups that have been created for this droplet
+        """
         return self.parent.backups(self.id)
 
     def actions(self):
+        """
+        Action history on this droplet
+        """
         return self.parent.actions(self.id)
 
     def delete(self, wait=True):
+        """
+        Delete this droplet
+
+        Parameters
+        ----------
+        wait: bool, default True
+            Whether to block until the pending action is completed
+        """
         resp = self.parent.delete(self.id)
         if wait:
             self.wait()
@@ -305,6 +503,12 @@ class DropletActions(Resource):
     def connect(self, interactive=False):
         """
         Open SSH connection to droplet
+
+        Parameters
+        ----------
+        interactive: bool, default False
+            If True then SSH client will prompt for password when necessary
+            and also print output to console
         """
         rs = SSHClient(self.ip_address, interactive=interactive)
         return rs
