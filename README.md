@@ -18,6 +18,13 @@ actions that your situation requires.
 This library starts with a python wrapper for the API and aims to build tools to
 make it easier to manage, provision, and deploy to Digital Ocean.
 
+Highlights
+----------
+*Full featured* : API wrapper covering the published DigitalOcean API v2
+*Tested* : integration test coverage against most of the API
+*SSH integration*: integrates `paramiko` library so you can SSH in and issue commands
+*Deployment conveniences*: methods like `apt`, `pip`, and `git` for easier deployment
+
 
 Setup
 -----
@@ -186,19 +193,5 @@ modifying it, then finally destroying it, the test takes a long time to run.
 To only run the other tests, use the `not slow` marker from `pytest`:
 
 ```
-~$ py.test -v -m "not slow"
-===================================== test session starts ======================================
-platform linux2 -- Python 2.7.6 -- py-1.4.23 -- pytest-2.6.0 --
-collected 8 items
-
-tests/test_api.py@72::test_regions PASSED
-tests/test_api.py@82::test_sizes PASSED
-tests/test_api.py@92::test_actions PASSED
-tests/test_api.py@101::test_keys PASSED
-tests/test_api.py@122::test_domains PASSED
-tests/test_api.py@141::test_domain_records PASSED
-tests/test_api.py@145::test_images PASSED
-
-============================ 1 tests deselected by "-m 'not slow'" =============================
-============================ 7 passed, 1 deselected in 6.85 seconds ============================
+py.test -v -m "not slow"
 ```
