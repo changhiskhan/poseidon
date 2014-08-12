@@ -78,7 +78,7 @@ def test_domains(client):
     ip_address = '127.0.0.1'
     test = 'b7qtKVSdqoVZ2bCX0SXdn2pxZitnFjUx.com'
     rs = client.domains.create(test, ip_address)
-    new_name = rs.domain
+    new_name = rs.name
     assert new_name == test
     new_domains = client.domains.list()
     assert len(new_domains) > len(old_domains)

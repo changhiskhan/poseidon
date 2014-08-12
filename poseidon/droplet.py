@@ -15,7 +15,7 @@ class Droplets(MutableCollection):
     respective sections.
     """
 
-    name = 'droplets'
+    resource_path = 'droplets'
 
     def kernels(self, id):
         """
@@ -179,12 +179,10 @@ class DropletActions(Resource):
         self.id = kwargs.pop('id')
         self.parent = collection
         for k, v in kwargs.iteritems():
-            if k == 'name':
-                k = 'droplet_name'
             setattr(self, k, v)
 
     @property
-    def name(self):
+    def resource_path(self):
         return 'droplets/%s/actions' % self.id
 
     def get_action(self, action_id):

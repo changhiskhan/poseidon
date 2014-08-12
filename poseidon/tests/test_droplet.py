@@ -76,7 +76,7 @@ def test_basic(client, fixture):
 
     # verify we got what we made
     assert isinstance(droplet, DropletActions)
-    assert droplet.droplet_name == fixture.name
+    assert droplet.name == fixture.name
     assert droplet.region['slug'] == fixture.region
     assert droplet.size['slug'] == fixture.size
     assert droplet.image['id'] == fixture.image_id
@@ -150,7 +150,7 @@ def test_password_reset(client, fixture):
 def test_rename(client, fixture):
     resp = fixture.droplet.rename('new-name')
     assert resp['action']['type'] == 'rename'
-    assert client.droplets.get(fixture.droplet.id).droplet_name == 'new-name'
+    assert client.droplets.get(fixture.droplet.id).name == 'new-name'
 
 @pytest.mark.slow
 def test_connect(fixture):
