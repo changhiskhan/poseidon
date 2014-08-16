@@ -24,9 +24,9 @@ Highlights
 
 - **Tested**: integration test coverage against most of the API
 
-- **SSH integration**: integrates `paramiko` library so you can SSH in and issue commands
+- **SSH integration**: integrates ``paramiko`` library so you can SSH in and issue commands
 
-- **Deployment conveniences**: methods like `apt`, `pip`, and `git` for easier deployment
+- **Deployment conveniences**: methods like ``apt``, ``pip``, and ``git`` for easier deployment
 
 
 Setup
@@ -96,7 +96,7 @@ Clone github repo:
 
 .. code:: python
 
-   # requires `GITHUB_TOKEN` envvar
+   # requires "GITHUB_TOKEN" envvar
    ssh.git(username='changhiskhan', repo='hello_world')
 
 Change directory:
