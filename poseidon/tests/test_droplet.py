@@ -150,7 +150,9 @@ def test_password_reset(client, fixture):
 def test_rename(client, fixture):
     resp = fixture.droplet.rename('new-name')
     assert resp['action']['type'] == 'rename'
-    assert client.droplets.get(fixture.droplet.id).name == 'new-name'
+    # tests refresh
+    fixture.droplet.refresh()
+    assert fixture.droplet.name == 'new-name'
 
 @pytest.mark.slow
 def test_connect(fixture):

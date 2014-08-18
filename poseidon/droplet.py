@@ -133,8 +133,11 @@ class Droplets(MutableCollection):
         -------
         droplet: DropletActions
         """
-        info = super(Droplets, self).get(id)
+        info = self._get_droplet_info(id)
         return DropletActions(self.api, self, **info)
+
+    def _get_droplet_info(self, id):
+        return super(Droplets, self).get(id)
 
     def by_name(self, name):
         """
@@ -178,8 +181,15 @@ class DropletActions(Resource):
         super(DropletActions, self).__init__(api)
         self.id = kwargs.pop('id')
         self.parent = collection
+        self._init_attrs(**kwargs)
+
+    def _init_attrs(self, **kwargs):
         for k, v in kwargs.iteritems():
             setattr(self, k, v)
+
+    def refresh(self):
+        info = self.parent._get_droplet_info(self.id)
+        self._init_attrs(**info)
 
     @property
     def resource_path(self):
