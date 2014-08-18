@@ -18,9 +18,17 @@ actions that your situation requires.
 This library starts with a python wrapper for the API and aims to build tools to
 make it easier to manage, provision, and deploy to Digital Ocean.
 
+Highlights
+----------
+*Full featured* : API wrapper covering the published DigitalOcean API v2
+*Tested* : integration test coverage against most of the API
+*SSH integration*: integrates `paramiko` library so you can SSH in and issue commands
+*Deployment conveniences*: methods like `apt`, `pip`, and `git` for easier deployment
+
 
 Setup
 -----
+
 `pip install -U poseidon`
 
 To run the unit tests make sure you have the `pytest` module.
@@ -29,6 +37,7 @@ If not, run `pip install -U pytest`
 
 Examples
 --------
+
 Setup authentication by generating an API key and exporting it as the value of the
 `DIGITALOCEAN_API_KEY` environment variable.
 
@@ -42,8 +51,9 @@ client = po.connect() # or po.connect(api_key=<KEY>) for custom api key
 ### Create a droplet
 ```
 image_id = 135123 # replace with your own
+key_id = 175235 # e.g., client.keys.list()[0]['id']
 droplet = client.droplets.create(name='test', region='sfo1', size='512mb',
-                                 image=image_id)
+                                 image=image_id, ssh_keys=[key_id])
 ```
 
 ### Programmatically create a snapshot
@@ -56,6 +66,52 @@ droplet.take_snapshot('test-snapshot')
 ```
 snapshots = droplet.snapshots() # one of these should be named 'test-snapshot'
 ```
+
+### Issuing commands to the droplet via SSH
+poseidon connects to your droplet via SSH using the `paramiko` library
+
+#### Create a connection
+
+```
+ssh = droplet.connect()
+```
+
+#### Install system packages
+
+```
+ssh.apt('git python-pip')
+```
+
+#### Clone a github repo
+
+```
+# requires GITHUB_TOKEN envvar
+ssh.git(username='changhiskhan', repo='hello_world')
+```
+
+#### Change directory
+
+```
+ssh.chdir('hello_world')
+```
+
+#### pip install -r
+`ssh.pip_r('requirements.txt')`
+
+#### Launch application
+```
+ssh.nohup('python app.py')
+```
+
+#### Check processes
+```
+print ssh.ps()
+```
+
+
+
+Other API Features
+------------------
 
 ### Other simple droplet commands
 ```
@@ -137,25 +193,5 @@ modifying it, then finally destroying it, the test takes a long time to run.
 To only run the other tests, use the `not slow` marker from `pytest`:
 
 ```
-~$ py.test -v -m "not slow"
-===================================== test session starts ======================================
-platform linux2 -- Python 2.7.6 -- py-1.4.23 -- pytest-2.6.0 --
-collected 8 items
-
-tests/test_api.py@72::test_regions PASSED
-tests/test_api.py@82::test_sizes PASSED
-tests/test_api.py@92::test_actions PASSED
-tests/test_api.py@101::test_keys PASSED
-tests/test_api.py@122::test_domains PASSED
-tests/test_api.py@141::test_domain_records PASSED
-tests/test_api.py@145::test_images PASSED
-
-============================ 1 tests deselected by "-m 'not slow'" =============================
-============================ 7 passed, 1 deselected in 6.85 seconds ============================
+py.test -v -m "not slow"
 ```
-
-TODO
-----
-1. Refactor the result format to allow for easy multipage resultset paging
-2. Additional unit tests
-3. Tools for scaling, provisioning, deployment

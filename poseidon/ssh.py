@@ -1,6 +1,7 @@
 import os
 import getpass
 from cStringIO import StringIO
+import paramiko
 
 # make these optional so not everyone has to build C binaries
 try:
@@ -10,13 +11,6 @@ try:
     has_pandas = True
 except ImportError:
     has_pandas = False
-
-try:
-    import paramiko
-    has_paramiko = True
-except ImportError:
-    has_paramiko = False
-
 
 
 class SSHClient(object):
@@ -47,8 +41,6 @@ class SSHClient(object):
         return self._con
 
     def _connect(self):
-        if not has_paramiko:
-            raise ImportError("Unable to import paramiko")
         self._con = paramiko.SSHClient()
         self._con.set_missing_host_key_policy(
             paramiko.AutoAddPolicy())
@@ -59,14 +51,24 @@ class SSHClient(object):
         self._con.connect(self.host, **kwargs)
 
     def chdir(self, new_pwd, relative=True):
+        """
+        Parameters
+        ----------
+        new_pwd: str,
+            Directory to change to
+        relative: bool, default True
+            If True then the given directory is treated as relative to the
+            current directory
+        """
         if new_pwd and self.pwd and relative:
             new_pwd = os.path.join(self.pwd, new_pwd)
         self.pwd = new_pwd
 
     def add_public_key(self, key_path):
+        # TODO unit test. Not sure this works
         self.password = self.validate_password(self.password)
         key_contents = open(os.path.expanduser(key_path)).read()
-        cmd = 'mkdir -p ~/.ssh && cat "%s"  ~/.ssh/authorized_keys'
+        cmd = 'mkdir -p ~/.ssh && cat "%s" >> ~/.ssh/authorized_keys'
         self.wait(cmd % key_contents)
 
     def close(self):

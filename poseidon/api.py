@@ -20,11 +20,12 @@ API_URL = 'https://api.digitalocean.com'
 """
 TODO: refactor for multipage results
 TODO: unit tests for Images, ImageActions, and DomainRecords
-TODO: more tests for droplets
-TODO: test account?
 """
 
 class APIError(Exception):
+    """
+    Error raised when API response status code is above 200s range
+    """
 
     def __init__(self, message, status_code, **kwargs):
         super(APIError, self).__init__(message)
@@ -47,22 +48,33 @@ class RestAPI(object):
         ----------
         kind: str, {get, delete, put, post, head}
         resource: str
-        url_components: list or tuple
+        url_components: list or tuple to be appended to the request URL
+
+        Notes
+        -----
+        kwargs contain request parameters to be sent as request data
         """
         url = self.format_request_url(resource, *url_components)
         meth = getattr(requests, kind)
         headers = self.get_request_headers()
         req_data = self.format_parameters(**kwargs)
-        req = meth(url, headers=headers, data=req_data)
-        data = self.get_response(req)
-        if req.status_code >= 300:
+        response = meth(url, headers=headers, data=req_data)
+        data = self.get_response(response)
+        if response.status_code >= 300:
             msg = data.pop('message', 'API request returned error')
-            raise APIError(msg, req.status_code, **data)
+            raise APIError(msg, response.status_code, **data)
         return data
 
-    def get_response(self, req):
+    def get_response(self, resp):
+        """
+        Retrieve response as json and deserialize as dict
+
+        Parameters
+        ----------
+        resp: requests.models.Response
+        """
         try:
-            return req.json()
+            return resp.json()
         except json.JSONDecodeError:
             return {}
 
@@ -73,6 +85,9 @@ class RestAPI(object):
         raise NotImplementedError()
 
     def format_parameters(self, **kwargs):
+        """
+        Properly formats array types
+        """
         req_data = {}
         for k, v in kwargs.items():
             if isinstance(v, (list, tuple)):
@@ -83,6 +98,9 @@ class RestAPI(object):
 
 
 class DigitalOceanAPI(RestAPI):
+    """
+    Implements RestAPI with DigitalOcean API v2 url and authentication method
+    """
 
     def __init__(self, api_key=None, api_url=API_URL, api_version=API_VERSION):
         """
@@ -121,7 +139,7 @@ class Resource(object):
     Abstract resource exposed by the REST API
     """
 
-    name = None
+    resource_path = None
 
     def __init__(self, api):
         """
@@ -139,7 +157,8 @@ class Resource(object):
         ----------
         kind: str, {'get', 'delete', 'put', 'post', 'head'}
         """
-        return self.api.send_request(kind, self.name, url_components, **kwargs)
+        return self.api.send_request(kind, self.resource_path, url_components,
+                                     **kwargs)
 
     def get(self, url_components=(), **kwargs):
         """
@@ -180,15 +199,25 @@ class ResourceCollection(Resource):
     """
 
     def list(self, url_components=()):
+        """
+        Send list request for all members of a collection
+        """
         resp = self.get(url_components)
         return resp.get(self.result_key, [])
 
     @property
     def result_key(self):
-        return self.name
+        """
+        Key value for response contents
+        """
+        return self.resource_path
 
     @property
     def singular(self):
+        """
+        Key value for response contents when requesting single unit of
+        collection
+        """
         return self.result_key[:-1]
 
 
@@ -232,15 +261,21 @@ class ImageActions(Resource):
         super(ImageActions, self).__init__(api)
         self.id = id
         for k, v in kwargs.iteritems():
-            if k == 'name':
-                k = 'image_name'
             setattr(self, k, v)
 
-    def transfer(self, type, region):
-        self.post(type=type, region=region)
+    def transfer(self, region):
+        """
+        Transfer this image to given region
+
+        Parameters
+        ----------
+        region: str
+            region slug to transfer to (e.g., sfo1, nyc1)
+        """
+        self.post(type='transfer', region=region)
 
     @property
-    def name(self):
+    def resource_path(self):
         return 'images/%s/actions' % self.image_id
 
 
@@ -261,7 +296,7 @@ class Images(MutableCollection):
     To interact with images, you will generally send requests to the images
     endpoint at /v2/images.
     """
-    name = 'images'
+    resource_path = 'images'
 
     def get(self, id):
         """id or slug"""
@@ -277,7 +312,7 @@ class Keys(MutableCollection):
     public key is required to take advantage of this functionality.
     """
 
-    name = 'account/keys'
+    resource_path = 'account/keys'
 
     @property
     def result_key(self):
@@ -303,7 +338,7 @@ class Domains(MutableCollection):
     resource.
     """
 
-    name = 'domains'
+    resource_path = 'domains'
 
     def create(self, name, ip_address):
         (self.post(name=name, ip_address=ip_address)
@@ -327,13 +362,13 @@ class DomainRecords(MutableCollection):
     domain.
     """
 
-    def __init__(self, api, domain):
+    def __init__(self, api, name):
         self.api = api
-        self.domain = domain
+        self.name = name
 
     @property
-    def name(self):
-        return 'domains/%s/records' % self.domain
+    def resource_path(self):
+        return 'domains/%s/records' % self.name
 
     def update(self, id, name):
         return super(Keys, self).update(id, name=name)
@@ -341,7 +376,7 @@ class DomainRecords(MutableCollection):
     def create(self, type, name=None, data=None, priority=None,
                port=None, weight=None):
         if type == 'A' and name is None:
-            name = self.domain
+            name = self.name
         return self.post(type=type, name=name, data=data, priority=priority,
                          port=port, weight=weight)
 
@@ -364,7 +399,7 @@ class Regions(ResourceCollection):
     geographical locations may have multiple "regions" available. This means
     that there are multiple datacenters available within that area.
     """
-    name = 'regions'
+    resource_path = 'regions'
 
 
 
@@ -379,7 +414,7 @@ class Sizes(ResourceCollection):
     disk space, and transfer. The size object also includes the pricing details
     and the regions that the size is available in.
     """
-    name = 'sizes'
+    resource_path = 'sizes'
 
 
 
@@ -398,7 +433,7 @@ class Actions(ResourceCollection):
     endpoint. Completed actions are not removed from this list and are always
     available for querying.
     """
-    name = 'actions'
+    resource_path = 'actions'
 
     def list(self, url_components=()):
         resp = super(Actions, self).get(url_components)
