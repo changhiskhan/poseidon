@@ -1,54 +1,27 @@
-Python library for managing your Digital Ocean account API v2
+Getting Started
+===============
 
-.. image:: https://pypip.in/v/poseidon/badge.png
-    :target: https://crate.io/packages/poseidon/
-    :alt: Latest PyPI version
-
-.. image:: https://pypip.in/d/poseidon/badge.png
-    :target: https://crate.io/packages/poseidon/
-    :alt: Number of PyPI downloads
-
-The DigitalOcean API allows you to manage Droplets and resources within the
-DigitalOcean cloud in a simple, programmatic way using conventional HTTP
-requests. The endpoints are intuitive and powerful, allowing you to easily make
-calls to retrieve information or to execute actions.
-
-This library starts with a python wrapper for the API and aims to build tools to
-make it easier to manage, provision, and deploy to Digital Ocean.
-
-
-Highlights
-==========
-
-- **Full featured**: API wrapper covering the published DigitalOcean API v2
-
-- **Tested**: integration test coverage against most of the API
-
-- **SSH integration**: integrates ``paramiko`` library so you can SSH in and issue commands
-
-- **Deployment conveniences**: methods like ``apt``, ``pip``, and ``git`` for easier deployment
-
-
-Setup
-=====
+Installation
+------------
 
 .. code:: bash
 
     pip install -U poseidon
 
-
-Examples
-========
-
-Setup authentication by generating an API key and exporting it as the value of the
-"DIGITALOCEAN_API_KEY" environment variable:
+In order to authenticate with DigitalOcean, it is highly recommended that you
+generate an API key via the DigitalOcean website and export it as the value of
+the ``DIGITALOCEAN_API_KEY`` environment variable:
 
 .. code:: bash
 
    export DIGITALOCEAN_API_KEY=<value>
 
 
-Connect to API:
+Examples
+--------
+
+Once you have installed poseidon and setup the API key, connecting to API is
+simple:
 
 .. code:: python
 
@@ -125,7 +98,7 @@ Check processes:
 
 
 Testing
-=======
+-------
 
 To run the test suite make sure you have the ``pytest`` module.
 

@@ -1,5 +1,5 @@
-DigitalOcean API v2
-===================
+Working with the DigitalOcean API v2
+====================================
 
 Using the ``requests`` library, poseidon offers a Python wrapper for
 DigitalOcean's API v2.
