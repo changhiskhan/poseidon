@@ -91,6 +91,7 @@ def test_domains(client):
     assert result['name'] == expected['name']
 
     records.rename(id, 'new-record')
+    time.sleep(1)
     result = records.get(id)
     assert result['name'] == 'new-record'
 
