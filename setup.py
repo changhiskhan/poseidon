@@ -35,9 +35,9 @@ CLASSIFIERS = [
     'Programming Language :: Python :: 2.7'
 ]
 
-SUMMARY = "Digital Ocean API v2 with SSH integration"
+DESCRIPTION = "Digital Ocean API v2 with SSH integration"
 
-DESCRIPTION = """
+LONG_DESCRIPTION = """
 ********************************
 poseidon: tame the digital ocean
 ********************************
@@ -95,6 +95,7 @@ Deploy a new Flask app from github
     ssh.pip_r('requirements.txt')
     ssh.nohup('python app.py') # DNS takes a while to propagate
     print ssh.ps()
+
 """
 
 setup(
@@ -107,6 +108,7 @@ setup(
     keywords=['digitalocean', 'digital ocean', 'digital', 'ocean', 'api', 'v2',
               'web programming', 'cloud', 'digitalocean api v2'],
     description=DESCRIPTION,
+    long_description=LONG_DESCRIPTION,
     classifiers=CLASSIFIERS,
     download_url=DOWNLOAD_URL,
     package_data={'': ['requirements.txt']},
