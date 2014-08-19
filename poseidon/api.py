@@ -272,11 +272,12 @@ class ImageActions(Resource):
         region: str
             region slug to transfer to (e.g., sfo1, nyc1)
         """
-        self.post(type='transfer', region=region)
+        action = self.post(type='transfer', region=region)['action']
+        return self.parent.get(action['resource_id'])
 
     @property
     def resource_path(self):
-        return 'images/%s/actions' % self.image_id
+        return 'images/%s/actions' % self.id
 
 
 
@@ -301,7 +302,7 @@ class Images(MutableCollection):
     def get(self, id):
         """id or slug"""
         info = super(Images, self).get(id)
-        return ImageActions(self.api, **info)
+        return ImageActions(self.api, parent=self, **info)
 
 
 
@@ -341,15 +342,35 @@ class Domains(MutableCollection):
     resource_path = 'domains'
 
     def create(self, name, ip_address):
-        (self.post(name=name, ip_address=ip_address)
-         .get(self.singular, None))
-        return self.records(name)
+        """
+        Creates a new domain
+
+        Parameters
+        ----------
+        name: str
+            new domain name
+        ip_address: str
+            IP address for the new domain
+        """
+        return (self.post(name=name, ip_address=ip_address)
+                .get(self.singular, None))
 
     def records(self, name):
+        """
+        Get a list of all domain records for the given domain name
+
+        Parameters
+        ----------
+        name: str
+            domain name
+        """
         if self.get(name):
             return DomainRecords(self.api, name)
 
     def update(self, id, **kwargs):
+        """
+        Domain cannot be updated
+        """
         raise NotImplementedError()
 
 
@@ -362,27 +383,62 @@ class DomainRecords(MutableCollection):
     domain.
     """
 
-    def __init__(self, api, name):
+    def __init__(self, api, domain):
         self.api = api
-        self.name = name
+        self.domain = domain
 
     @property
     def resource_path(self):
-        return 'domains/%s/records' % self.name
+        return 'domains/%s/records' % self.domain
 
-    def update(self, id, name):
-        return super(Keys, self).update(id, name=name)
+    @property
+    def singular(self):
+        return 'domain_record'
+
+    def rename(self, id, name):
+        """
+        Change the name of this domain record
+
+        Parameters
+        ----------
+        id: int
+            domain record id
+        name: str
+            new name of record
+        """
+        return super(DomainRecords, self).update(id, name=name)[self.singular]
 
     def create(self, type, name=None, data=None, priority=None,
                port=None, weight=None):
+        """
+        Parameters
+        ----------
+        type: str
+            {A, AAAA, CNAME, MX, TXT, SRV, NS}
+        name: str
+            Name of the record
+        data: object, type-dependent
+            type == 'A' : IPv4 address
+            type == 'AAAA' : IPv6 address
+            type == 'CNAME' : destination host name
+            type == 'MX' : mail host name
+            type == 'TXT' : txt contents
+            type == 'SRV' : target host name to direct requests for the service
+            type == 'NS' :  name server that is authoritative for the domain
+        priority:
+        port:
+        weight:
+        """
         if type == 'A' and name is None:
-            name = self.name
+            name = self.domain
         return self.post(type=type, name=name, data=data, priority=priority,
-                         port=port, weight=weight)
+                         port=port, weight=weight)[self.singular]
 
     def get(self, id, **kwargs):
-        return (super(DomainRecords, self).get((id,), **kwargs)
-                .get('domain_record', None))
+        """
+        Retrieve a single domain record given the id
+        """
+        return super(DomainRecords, self).get(id, **kwargs)
 
 
 

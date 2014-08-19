@@ -64,12 +64,14 @@ class SSHClient(object):
             new_pwd = os.path.join(self.pwd, new_pwd)
         self.pwd = new_pwd
 
-    def add_public_key(self, key_path):
+    def add_public_key(self, key_path, validate_password=True):
         # TODO unit test. Not sure this works
-        self.password = self.validate_password(self.password)
-        key_contents = open(os.path.expanduser(key_path)).read()
-        cmd = 'mkdir -p ~/.ssh && cat "%s" >> ~/.ssh/authorized_keys'
-        self.wait(cmd % key_contents)
+        if validate_password:
+            self.password = self.validate_password(self.password)
+        key_path = os.path.expanduser(key_path)
+        with open(key_path, 'r') as fp:
+            cmd = 'mkdir -p ~/.ssh && echo "%s" >> ~/.ssh/authorized_keys'
+            self.wait(cmd % fp.read())
 
     def close(self):
         if self._con is not None:
