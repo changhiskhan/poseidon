@@ -93,7 +93,7 @@ def test_ssh_add_public_key(client, fixture):
     if fixture.options['ssh_keys'] is None:
         pytest.skip("Need to setup public key manually")
     droplet = fixture.droplet
-    time.sleep(1)
+    time.sleep(5)
     ssh = droplet.connect()
     file_path = os.path.expanduser('~/tmp/key.txt')
     content = 'test-key'
