@@ -13,11 +13,12 @@ Caveat emptor:
 """
 
 import poseidon as P
-con = P.connect()
-ssh_key_id = con.keys.list()[0]['id']
-droplet = con.droplets.create('example.changshe.io', 'sfo1', '512mb',
+client = P.connect()
+ssh_key_id = client.keys.list()[0]['id']
+droplet = client.droplets.create('example.changshe.io', 'sfo1', '512mb',
                               'ubuntu-14-04-x64', ssh_keys=[ssh_key_id])
-records = con.domains.create('example.changshe.io', droplet.ip_address)
+domain = client.domains.create('example.changshe.io', droplet.ip_address)
+records = client.domains.records(domain['name'])
 records.create('A', data=droplet.ip_address)
 ssh = droplet.connect()
 ssh.apt('git python-pip')
