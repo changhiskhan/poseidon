@@ -99,7 +99,3 @@ def test_domains(client):
 
     client.domains.delete(new_name)
     assert len(client.domains.list()) == len(old_domains)
-
-
-def test_images(client):
-    pass

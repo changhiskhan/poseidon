@@ -272,11 +272,12 @@ class ImageActions(Resource):
         region: str
             region slug to transfer to (e.g., sfo1, nyc1)
         """
-        self.post(type='transfer', region=region)
+        action = self.post(type='transfer', region=region)['action']
+        return self.parent.get(action['resource_id'])
 
     @property
     def resource_path(self):
-        return 'images/%s/actions' % self.image_id
+        return 'images/%s/actions' % self.id
 
 
 
@@ -301,7 +302,7 @@ class Images(MutableCollection):
     def get(self, id):
         """id or slug"""
         info = super(Images, self).get(id)
-        return ImageActions(self.api, **info)
+        return ImageActions(self.api, parent=self, **info)
 
 
 

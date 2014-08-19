@@ -7,6 +7,7 @@ import time
 
 import pytest
 
+import poseidon.api as P
 from poseidon.droplet import Droplets, DropletActions
 from poseidon.ssh import SSHClient
 from test_api import client
@@ -158,6 +159,20 @@ def test_take_snapshot(client, fixture):
     for x in new_snapshots:
         if x['name'] == 'foobarbaz':
             snapshot = x
+
+    # image and image actions
+    client.images.list() # all images historical
+    assert hasattr(client, 'images')
+    assert isinstance(client.images, P.Images)
+
+    id = snapshot['id']
+    im = client.images.get(id)
+    assert im.id == id
+
+    assert isinstance(im, P.ImageActions)
+    im.transfer('nyc1')
+    # assert new_im.regions[0] == 'nyc1' # wait too long
+
     client.images.delete(snapshot['id'])
 
 
