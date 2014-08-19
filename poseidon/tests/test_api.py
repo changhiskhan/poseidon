@@ -77,21 +77,28 @@ def test_domains(client):
     old_domains = client.domains.list() # it works
     ip_address = '127.0.0.1'
     test = 'b7qtKVSdqoVZ2bCX0SXdn2pxZitnFjUx.com'
-    rs = client.domains.create(test, ip_address)
-    new_name = rs.name
+    domain = client.domains.create(test, ip_address)
+    new_name = domain['name']
     assert new_name == test
     new_domains = client.domains.list()
     assert len(new_domains) > len(old_domains)
+
+    records = client.domains.records(domain['name'])
+    assert isinstance(records, P.DomainRecords)
+    result = records.create('A', name='foo-record', data='127.0.0.1')
+    id = result['id']
+    expected = records.get(id)
+    assert result['name'] == expected['name']
+
+    records.rename(id, 'new-record')
+    result = records.get(id)
+    assert result['name'] == 'new-record'
 
     domain = client.domains.get(new_name)
     assert domain['name'] == test
 
     client.domains.delete(new_name)
     assert len(client.domains.list()) == len(old_domains)
-
-
-def test_domain_records(client):
-    pass
 
 
 def test_images(client):
