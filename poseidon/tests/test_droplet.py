@@ -2,8 +2,11 @@
 Tests here are marked slow because they involve actually creating and destroying
 a droplet
 """
+import os
+import time
 
 import pytest
+
 from poseidon.droplet import Droplets, DropletActions
 from poseidon.ssh import SSHClient
 from test_api import client
@@ -16,19 +19,19 @@ from test_api import client
 
 class DropletFixture(object):
 
-    def __init__(self, client, name, region, size, image_id, **kwargs):
+    def __init__(self, client, name, region, size, image, **kwargs):
         self.client = client
         self.name = name
         self.region = region
         self.size = size
-        self.image_id = image_id
+        self.image = image
         self.options = kwargs
         self._droplet = None
 
     def create(self):
         old_droplets = self.client.droplets.list()
         self._droplet = self.client.droplets.create(
-            self.name, self.region, self.size, self.image_id,
+            self.name, self.region, self.size, self.image,
             **self.options)
         new_droplets = self.client.droplets.list()
         assert len(old_droplets) + 1 == len(new_droplets)
@@ -57,10 +60,13 @@ def fixture(request):
     name = 'test-droplet'
     region = 'sfo1'
     size = '512mb'
-    id = api.images.list()[0]['id']
-    image_id = api.images.get(id).id
-
-    fixture = DropletFixture(api, name, region, size, image_id)
+    image_slug = 'ubuntu-14-04-x64'
+    ssh_key_id = None
+    keys = api.keys.list()
+    if keys and len(keys) > 0:
+        ssh_key_id = keys[0]['id']
+    fixture = DropletFixture(api, name, region, size, image_slug,
+                             ssh_keys=[ssh_key_id])
     request.addfinalizer(fixture.destroy)
     return fixture
 
@@ -79,7 +85,46 @@ def test_basic(client, fixture):
     assert droplet.name == fixture.name
     assert droplet.region['slug'] == fixture.region
     assert droplet.size['slug'] == fixture.size
-    assert droplet.image['id'] == fixture.image_id
+    assert droplet.image['slug'] == fixture.image
+
+@pytest.mark.slow
+def test_ssh_add_public_key(client, fixture):
+    if fixture.options['ssh_keys'] is None:
+        pytest.skip("Need to setup public key manually")
+    droplet = fixture.droplet
+    time.sleep(1)
+    ssh = droplet.connect()
+    file_path = os.path.expanduser('~/tmp/key.txt')
+    content = 'test-key'
+    with open(file_path, 'wb') as fh:
+        fh.write(content)
+        fh.flush()
+    ssh.add_public_key(file_path, validate_password=False)
+    output = ssh.wait('cat ~/.ssh/authorized_keys').strip()
+    assert output[-len(content):] == content
+
+# @pytest.mark.slow
+# only in Singapore right now ?
+# def test_resize(client, fixture):
+#     fixture.droplet.power_off()
+#     fixture.droplet.resize('1gb')
+#     fixture.droplet.power_on()
+#     assert fixture.droplet.size == '1gb'
+
+
+@pytest.mark.slow
+def test_enable_private_networking(client, fixture):
+    fixture.droplet.power_off()
+    fixture.droplet.enable_private_networking() # works
+    fixture.droplet.power_on()
+
+
+@pytest.mark.slow
+def test_change_kernel(client, fixture):
+    kernels = fixture.droplet.kernels()
+    fixture.droplet.change_kernel(kernels[0]['id'])
+    fixture.droplet.refresh()
+    assert fixture.droplet.kernel['id'] == kernels[0]['id']
 
 
 @pytest.mark.slow
