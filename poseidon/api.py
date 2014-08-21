@@ -11,7 +11,10 @@ actions that your situation requires.
 
 import os
 import requests
-import simplejson as json
+try:
+    import simplejson as json
+except ImportError:
+    import json
 
 API_VERSION = 'v2'
 API_URL = 'https://api.digitalocean.com'
