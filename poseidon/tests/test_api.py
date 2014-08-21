@@ -46,8 +46,9 @@ def test_regions(client):
     assert hasattr(client, 'regions')
     assert isinstance(client.regions, P.Regions)
     regions = client.regions.list() # it works
-    expected = set([u'New York 1', u'Amsterdam 1', u'San Francisco 1',
-                    u'New York 2', u'Amsterdam 2', u'Singapore 1', u'London 1'])
+    expected = set([u'New York 1', u'New York 3', u'Amsterdam 1',
+                    u'San Francisco 1', u'New York 2', u'Amsterdam 2',
+                    u'Singapore 1', u'London 1'])
     results = set([x['name'] for x in regions])
     assert expected == results
 
