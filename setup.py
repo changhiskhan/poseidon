@@ -114,6 +114,5 @@ setup(
     package_data={'': ['requirements.txt']},
     install_requires = [
         'requests',
-        'paramiko',
     ],
 )

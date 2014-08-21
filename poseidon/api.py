@@ -11,7 +11,11 @@ actions that your situation requires.
 
 import os
 import requests
-import simplejson as json
+try:
+    import simplejson as json
+    JSON_ERROR = json.JSONDecodeError
+except ImportError:
+    JSON_ERROR = Exception
 
 API_VERSION = 'v2'
 API_URL = 'https://api.digitalocean.com'
@@ -75,7 +79,7 @@ class RestAPI(object):
         """
         try:
             return resp.json()
-        except json.JSONDecodeError:
+        except JSON_ERROR:
             return {}
 
     def get_request_headers(self):

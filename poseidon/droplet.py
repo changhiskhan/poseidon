@@ -1,7 +1,6 @@
 import time
 
 from poseidon.api import Resource, MutableCollection
-from poseidon.ssh import SSHClient
 
 
 class Droplets(MutableCollection):
@@ -520,5 +519,6 @@ class DropletActions(Resource):
             If True then SSH client will prompt for password when necessary
             and also print output to console
         """
+        from poseidon.ssh import SSHClient
         rs = SSHClient(self.ip_address, interactive=interactive)
         return rs

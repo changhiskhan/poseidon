@@ -1,7 +1,13 @@
+from __future__ import print_function
 import os
 import getpass
 from cStringIO import StringIO
-import paramiko
+
+try:
+    import paramiko
+except ImportError:
+    print("Please install paramiko to use SSH connection")
+    raise
 
 # make these optional so not everyone has to build C binaries
 try:
@@ -10,6 +16,7 @@ try:
         raise ImportError
     has_pandas = True
 except ImportError:
+    print("Pandas not found or out of date. SSHClient.ps will return str data")
     has_pandas = False
 
 
