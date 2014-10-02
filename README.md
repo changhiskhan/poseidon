@@ -44,8 +44,8 @@ Setup authentication by generating an API key and exporting it as the value of t
 
 ### Connect to API
 ```
-import poseidon.api as po
-client = po.connect() # or po.connect(api_key=<KEY>) for custom api key
+import poseidon
+client = poseidon.connect() # or poseidon.connect(api_key=<KEY>) for custom api key
 ```
 
 ### Create a droplet
