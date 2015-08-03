@@ -97,7 +97,7 @@ class SSHClient(object):
         if self.pwd is not None:
             cmd = 'cd %s ; %s' % (self.pwd, cmd)
         if self.interactive:
-            print cmd
+            print(cmd)
         return self.con.exec_command(cmd)
 
     def wait(self, cmd, raise_on_error=True):
@@ -109,10 +109,10 @@ class SSHClient(object):
         stdout.channel.recv_exit_status()
         output = stdout.read()
         if self.interactive:
-            print output
+            print(output)
         errors = stderr.read()
         if self.interactive:
-            print errors
+            print(errors)
         if errors and raise_on_error:
             raise ValueError(errors)
         return output
